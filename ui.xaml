@@ -1,0 +1,16 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">  <Style TargetType="Button">
+   <Setter Property="Background" Value="#E4EFF2"/><Setter Property="Foreground" Value="#193E49"/>
+   <Setter Property="Padding" Value="20,11"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="BorderBrush" Value="#C7DBE1"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+    <Border Name="ButtonSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.82"/></Trigger>
+     <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonSurface" Property="Opacity" Value="0.65"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ButtonSurface" Property="BorderBrush" Value="#31849A"/><Setter TargetName="ButtonSurface" Property="BorderThickness" Value="2"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style></ResourceDictionary>
