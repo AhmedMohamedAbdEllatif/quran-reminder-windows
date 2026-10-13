@@ -4,6 +4,7 @@
 *.bak
 progress.json
 preferences.json
+memorization.json
 custom-background.png
 __pycache__/
 
