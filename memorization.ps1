@@ -136,6 +136,10 @@ function Initialize-MemorizationTab($hostWindow) {
     $script:memorizationSettingsOpen = $true
     try {
         $planWindow = New-MemorizationSettingsWindow
+        $unitChoices = $planWindow.FindName('Unit')
+        $unitChoices.Items.Clear()
+        $unitChoices.DisplayMemberPath = 'Label'
+        foreach ($unitLabel in @('ثوانٍ','دقائق','ساعات')) { $unitChoices.Items.Add([pscustomobject]@{Label=$unitLabel}) | Out-Null }
         foreach ($verse in $verses) { if ($verse.ayah -eq 1) { $planWindow.FindName('Surah').Items.Add([pscustomobject]@{Label=$verse.surah_name;Number=$verse.surah_number}) | Out-Null } }
         $planWindow.FindName('Surah').Add_SelectionChanged({ Update-MemorizationPages $planWindow })
         $firstReference = $script:mushafPages[$script:memorization.page - 1].lines[0].references[0]
@@ -166,6 +170,7 @@ function Initialize-MemorizationTab($hostWindow) {
         })
         $panel = $planWindow.Content
         $panel.Margin = [Windows.Thickness]::new(8)
+        [Windows.Documents.TextElement]::SetForeground($panel, [Windows.Media.BrushConverter]::new().ConvertFromString('#193E49'))
         $planWindow.Content = $null
         $hostWindow.FindName('MemorizationTab').Content = $panel
         return $planWindow
