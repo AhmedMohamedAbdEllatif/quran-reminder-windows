@@ -1,7 +1,7 @@
 ﻿$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework
 $installFolder = Join-Path $env:LOCALAPPDATA 'QuranReminder\App'
-$requiredFiles = @('reminder.ps1', 'settings.ps1', 'tafsir.ps1', 'ui.ps1', 'ui.xaml', 'config.json', 'verses.json', 'background.png', 'Start.vbs', 'README.txt')
+$requiredFiles = @('reminder.ps1', 'settings.ps1', 'tafsir.ps1', 'memorization.ps1', 'mushaf-lines.json', 'ui.ps1', 'ui.xaml', 'config.json', 'verses.json', 'background.png', 'Start.vbs', 'README.txt')
 try {
     foreach ($fileName in $requiredFiles) {
         if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $fileName) -PathType Leaf)) { throw ('Missing file: ' + $fileName) }

@@ -83,9 +83,11 @@ func searchText(_ text: String) -> String {
 
 struct ReadingView: View {
     @ObservedObject var store: ReadingStore
+    @ObservedObject var memorization: MemorizationStore
     let hide: () -> Void
     @State private var settings = false
     @State private var tafsir = false
+    @State private var memorizationSettings = false
     var body: some View {
         ZStack {
             if let background = store.background { Image(nsImage: background).resizable().scaledToFill() }
@@ -114,12 +116,14 @@ struct ReadingView: View {
                     }.buttonStyle(.borderedProminent).disabled(store.displayed.isEmpty)
                     Button("التفسير") { tafsir = true }.disabled(store.displayed.isEmpty)
                     Button("الإعدادات") { settings = true }
+                    Button("خطة الحفظ") { memorizationSettings = true }
                     Button("إخفاء", action: hide)
                 }.controlSize(.large).buttonStyle(.bordered)
             }.padding(28).foregroundStyle(.white)
         }.clipped().tint(Color(red: 0.15, green: 0.36, blue: 0.43))
         .environment(\.layoutDirection, .rightToLeft)
         .sheet(isPresented: $settings) { SettingsView(store: store) }
+        .sheet(isPresented: $memorizationSettings) { MemorizationSettingsView(store: memorization, chapters: store.chapters) }
         .sheet(isPresented: $tafsir) {
             VStack(alignment: .leading, spacing: 20) {
                 Text("التفسير الميسر").font(.title2.bold())
@@ -231,8 +235,11 @@ struct SettingsView: View {
     private var window: NSWindow!
     private var status: NSStatusItem!
     private var timer: Timer?
+    private var memorization: MemorizationStore!
+    private var memorizationWindow: NSWindow!
+    private var memorizationTimer: Timer?
     func applicationDidFinishLaunching(_ notification: Notification) {
-        do { store = try ReadingStore() }
+        do { store = try ReadingStore(); memorization = try MemorizationStore(folder: store.folder) }
         catch { showFatal(error); return }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = "تذكير القرآن"
@@ -240,7 +247,13 @@ struct SettingsView: View {
         window.delegate = self
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.contentView = NSHostingView(rootView: ReadingView(store: store, hide: { [weak self] in self?.hideReminder() }))
+        window.contentView = NSHostingView(rootView: ReadingView(store: store, memorization: memorization, hide: { [weak self] in self?.hideReminder() }))
+        memorizationWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 620), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        memorizationWindow.title = "الحفظ والمراجعة"
+        memorizationWindow.level = .floating
+        memorizationWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        memorizationWindow.contentView = NSHostingView(rootView: MemorizationSessionView(store: memorization, dismissWindow: { [weak self] in self?.memorizationWindow.orderOut(nil) }))
+        memorizationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.showDueMemorization() } }
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         status.button?.title = "☾"
         status.button?.toolTip = "تذكير القرآن"
@@ -253,6 +266,11 @@ struct SettingsView: View {
         showReminder()
     }
     @objc func showReminder() {
+        if memorizationWindow.isVisible {
+            timer?.invalidate()
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { [weak self] _ in Task { @MainActor in self?.showReminder() } }
+            return
+        }
         timer?.invalidate()
         if let screen = NSScreen.main {
             let available = screen.visibleFrame
@@ -270,6 +288,12 @@ struct SettingsView: View {
         }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hideReminder(); return false }
+    func showDueMemorization() {
+        guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), !window.isVisible, !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
+        if let screen = NSScreen.main { memorizationWindow.setContentSize(NSSize(width: min(940, screen.visibleFrame.width - 40), height: min(620, screen.visibleFrame.height - 80))) }
+        memorizationWindow.center()
+        memorizationWindow.orderFrontRegardless()
+    }
     @objc func quit() { NSApplication.shared.terminate(nil) }
     func showFatal(_ error: Error) {
         let alert = NSAlert()
@@ -306,6 +330,22 @@ if CommandLine.arguments.contains("--check") {
         let restored = try ReadingStore(folder: temporary)
         try require(restored.preferences.index == 6236, "Reading position must survive reopening")
         try require(store.verses.allSatisfy { !$0.english.isEmpty && !$0.tafsir.isEmpty }, "Every verse needs translation and tafsir")
+        let memorization = try MemorizationStore(folder: temporary)
+        var plan = memorization.plan
+        plan.page = 3; plan.linesPerPart = 4; plan.repeats = 2; plan.interval = 17; plan.enabled = true
+        try memorization.save(plan)
+        try require(memorization.parts.map { $0.count } == [4,4,4,3], "Page must split into actual Mushaf lines")
+        try memorization.hide()
+        try require(memorization.plan.completedRepeats == 0, "Hiding must not count a review")
+        try memorization.confirm()
+        try require(memorization.plan.part == 0 && memorization.plan.completedRepeats == 1, "Part must repeat before advancing")
+        try memorization.confirm()
+        try require(memorization.plan.part == 1 && store.preferences.index == 6236, "Memorization must not change reading progress")
+        plan = memorization.plan; plan.part = 3; plan.completedRepeats = 1
+        try memorization.save(plan); try memorization.confirm()
+        try require(!memorization.plan.enabled && memorization.plan.part == 4, "Completed memorization plan must stop")
+        let restoredPlan = try MemorizationStore(folder: temporary)
+        try require(restoredPlan.plan.part == 4, "Memorization progress must persist")
         print("macOS checks passed: full data, surah search, grouped reading, final batch and persistence.")
     } catch { fputs("\(error)\n", stderr); exit(1) }
 } else {

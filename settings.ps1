@@ -72,6 +72,7 @@ function New-SettingsWindow {
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
    <StackPanel Margin="0,0,0,16">
     <TextBlock Text="على طريقتك" FontSize="27" FontWeight="SemiBold"/>
+    <Button Name="Memorization" Content="خطة الحفظ والمراجعة" Margin="0,12,0,0"/>
     <TextBlock Text="اختَر خلفية تحبها، وابدأ من الآية اللي تناسبك." Foreground="#607D86" FontSize="14" Margin="0,5,0,22" TextWrapping="Wrap"/>
     <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
@@ -154,6 +155,7 @@ function Show-Settings {
     $timer.Stop()
     $settingsWindow = New-SettingsWindow
     $settingsWindow.FindName('ImagePreview').Background = $window.FindName('BackgroundCard').Background
+    $settingsWindow.FindName('Memorization').Add_Click({ Show-MemorizationSettings })
     $selection = @{ ImagePath = $null }
     $countChoices = $settingsWindow.FindName('VerseCount')
     foreach ($count in 1..20) {

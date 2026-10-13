@@ -144,6 +144,7 @@ function Resize-Reminder {
     $window.FindName('VerseScroll').InvalidateMeasure()
 }
 function Show-Verse {
+    if ($script:memorizationWindow -and $script:memorizationWindow.IsVisible) { return }
     $timer.Stop()
     $expiry.Stop()
     $window.FindName('AdditionalVerses').Children.Clear()
@@ -195,11 +196,12 @@ function Confirm-Reading {
 }
 . (Join-Path $PSScriptRoot 'settings.ps1')
 . (Join-Path $PSScriptRoot 'tafsir.ps1')
+. (Join-Path $PSScriptRoot 'memorization.ps1')
 $window.FindName('Tafsir').Add_Click({ Show-Tafsir })
 $window.FindName('Settings').Add_Click({ Show-Settings })
 $readButton.Add_Click({ Confirm-Reading })
 $window.FindName('Hide').Add_Click({ Hide-Verse })
-$timer.Add_Tick({ Show-Verse })
+$timer.Add_Tick({ if (-not $script:memorizationWindow -or -not $script:memorizationWindow.IsVisible) { Show-Verse } })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {
@@ -285,6 +287,34 @@ if ($Check) {
     Set-StartingVerse 0
     Hide-Verse
     $timer.Stop()
+    $readingCountBeforeMemo = $script:readCount
+    $testPlan = [pscustomobject]@{enabled=$true;page=3;lines_per_part=4;repeat_count=2;interval_seconds=17;part_index=0;confirmed_repeats=0;next_due_unix=0}
+    Save-Memorization $testPlan
+    $memoParts = @(Get-MemorizationParts $script:memorization)
+    if ($memoParts.Count -ne 4 -or $memoParts[3].lines.Count -ne 3) { throw 'Page was not divided into 4+4+4+3 actual lines.' }
+    Show-Memorization
+    Hide-Memorization
+    if ($script:memorization.confirmed_repeats -ne 0) { throw 'Hiding a memorization part counted a review.' }
+    Show-Memorization
+    Confirm-Memorization
+    if ($script:memorization.part_index -ne 0 -or $script:memorization.confirmed_repeats -ne 1) { throw 'Memorization advanced before the repetition target.' }
+    Show-Memorization
+    Confirm-Memorization
+    if ($script:memorization.part_index -ne 1 -or $script:memorization.confirmed_repeats -ne 0 -or $script:readCount -ne $readingCountBeforeMemo) { throw 'Memorization progress mixed with ordinary reading.' }
+    $finalMemo = Get-MemorizationCopy
+    $finalMemo.part_index = 3; $finalMemo.confirmed_repeats = 1
+    Save-Memorization $finalMemo
+    Show-Memorization
+    Confirm-Memorization
+    if ($script:memorization.enabled -or $script:memorization.part_index -ne 4) { throw 'Completed page did not stop the memorization plan.' }
+    $memoSettingsCheck = New-MemorizationSettingsWindow
+    $memoSettingsCheck.FindName('Surah').Items.Add([pscustomobject]@{Label='مريم';Number=19}) | Out-Null
+    $memoSettingsCheck.FindName('Surah').SelectedIndex = 0
+    Update-MemorizationPages $memoSettingsCheck
+    if ($memoSettingsCheck.FindName('Page').Items.Count -lt 1) { throw 'Surah page choices were not populated.' }
+    $savedMemo = Get-Content $memorizationPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($savedMemo.interval_seconds -ne 17 -or $savedMemo.part_index -ne 4) { throw 'Custom timing or memorization position did not persist.' }
+    $timer.Stop()
     'WPF loaded; 6236 verses loaded; show, confirm, save and hide passed.'
     exit
 }
@@ -297,15 +327,17 @@ $tray.Text = 'Quran Reminder'
 $menu = [Windows.Forms.ContextMenuStrip]::new()
 $showMenu = $menu.Items.Add('عرض الآية')
 $settingsMenu = $menu.Items.Add('الإعدادات')
+$memorizationMenu = $menu.Items.Add('خطة الحفظ والمراجعة')
 $exitMenu = $menu.Items.Add('إغلاق البرنامج')
 $tray.ContextMenuStrip = $menu
 $tray.Visible = $true
 $dispatcher = [Windows.Threading.Dispatcher]::CurrentDispatcher
 $showMenu.Add_Click({ Show-Verse })
 $settingsMenu.Add_Click({ Show-Settings })
+$memorizationMenu.Add_Click({ Show-MemorizationSettings })
 $tray.Add_DoubleClick({ Show-Verse })
 $exitMenu.Add_Click({ $dispatcher.InvokeShutdown() })
-try { Show-Verse; [Windows.Threading.Dispatcher]::Run() }
+try { Start-MemorizationTimer; Show-Verse; [Windows.Threading.Dispatcher]::Run() }
 catch {
     $_ | Out-String | Set-Content (Join-Path $store 'error.log') -Encoding UTF8
     [Windows.MessageBox]::Show($_.Exception.Message, 'Quran Reminder') | Out-Null
