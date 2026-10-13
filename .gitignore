@@ -6,3 +6,6 @@ progress.json
 preferences.json
 custom-background.png
 __pycache__/
+
+build/
+.DS_Store

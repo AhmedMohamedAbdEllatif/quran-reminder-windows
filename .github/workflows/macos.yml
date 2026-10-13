@@ -1,0 +1,18 @@
+name: macOS build
+on:
+  push:
+    paths: ['macos/**', '.github/workflows/macos.yml', 'verses.json', 'background.png']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build universal app and check reading behavior
+        run: bash macos/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QuranReminder-macOS
+          path: build/QuranReminder-macOS.zip
