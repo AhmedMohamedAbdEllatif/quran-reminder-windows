@@ -130,6 +130,9 @@ function New-MemorizationSettingsWindow {
     return $planWindow
 }
 function Show-MemorizationSettings {
+    Show-Settings 1
+}
+function Initialize-MemorizationTab($hostWindow) {
     $script:memorizationSettingsOpen = $true
     try {
         $planWindow = New-MemorizationSettingsWindow
@@ -144,7 +147,7 @@ function Show-MemorizationSettings {
         $planWindow.FindName('Unit').SelectedIndex = 0
         $planWindow.FindName('Enabled').IsChecked = $script:memorization.enabled
         $planWindow.FindName('Progress').Text = 'الموضع الحالي: الجزء ' + ($script:memorization.part_index + 1) + ' · المراجعات المكتملة فيه: ' + $script:memorization.confirmed_repeats
-        $planWindow.FindName('Cancel').Add_Click({ $planWindow.Close() })
+        $planWindow.FindName('Cancel').Visibility = [Windows.Visibility]::Collapsed
         $planWindow.FindName('Save').Add_Click({
             try {
                 $nextPlan = Get-MemorizationCopy
@@ -158,10 +161,13 @@ function Show-MemorizationSettings {
                 if ($nextPlan.enabled -and $nextPlan.part_index -ge @(Get-MemorizationParts $nextPlan).Count) { throw 'الخطة مكتملة. فعّل ابدأ الخطة من أول الصفحة لإعادتها.' }
                 $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
                 Save-Memorization $nextPlan
-                $planWindow.Close()
+                $planWindow.FindName('Progress').Text = 'تم حفظ خطة الحفظ والمراجعة'
             } catch { [Windows.MessageBox]::Show($planWindow, $_.Exception.Message, 'راجع إعدادات الحفظ') | Out-Null }
         })
-        $planWindow.ShowDialog() | Out-Null
+        $panel = $planWindow.Content
+        $planWindow.Content = $null
+        $hostWindow.FindName('MemorizationTab').Content = $panel
+        return $planWindow
     } finally { $script:memorizationSettingsOpen = $false; if ($script:readingPending) { Show-Verse } }
 }
 function Start-MemorizationTimer {

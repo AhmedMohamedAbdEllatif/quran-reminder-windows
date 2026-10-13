@@ -122,8 +122,8 @@ struct ReadingView: View {
             }.padding(28).foregroundStyle(.white)
         }.clipped().tint(Color(red: 0.15, green: 0.36, blue: 0.43))
         .environment(\.layoutDirection, .rightToLeft)
-        .sheet(isPresented: $settings) { SettingsView(store: store) }
-        .sheet(isPresented: $memorizationSettings) { MemorizationSettingsView(store: memorization, chapters: store.chapters) }
+        .sheet(isPresented: $settings) { SettingsView(store: store, memorization: memorization) }
+        .sheet(isPresented: $memorizationSettings) { SettingsView(store: store, memorization: memorization, initialTab: 1) }
         .sheet(isPresented: $tafsir) {
             VStack(alignment: .leading, spacing: 20) {
                 Text("التفسير الميسر").font(.title2.bold())
@@ -147,6 +147,8 @@ struct ReadingView: View {
 
 struct SettingsView: View {
     @ObservedObject var store: ReadingStore
+    @ObservedObject var memorization: MemorizationStore
+    @State private var selectedTab: Int
     @Environment(\.dismiss) private var dismiss
     @State private var draft: Preferences
     @State private var search = ""
@@ -156,7 +158,9 @@ struct SettingsView: View {
     @State private var selectedImage: URL?
     @State private var loginEnabled = SMAppService.mainApp.status == .enabled
     @State private var failure: String?
-    init(store: ReadingStore) {
+    init(store: ReadingStore, memorization: MemorizationStore, initialTab: Int = 0) {
+        self.memorization = memorization
+        _selectedTab = State(initialValue: initialTab)
         self.store = store
         _draft = State(initialValue: store.preferences)
         let verse = store.verses[min(store.preferences.index, store.verses.count - 1)]
@@ -169,7 +173,16 @@ struct SettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("على طريقتك").font(.title.bold())
+            Picker("الإعدادات", selection: $selectedTab) {
+                Text("القراءة").tag(0)
+                Text("الحفظ").tag(1)
+                Text("الخلفية").tag(2)
+            }.pickerStyle(.segmented)
+            if selectedTab == 1 {
+                MemorizationSettingsView(store: memorization, chapters: store.chapters)
+            } else {
             Form {
+                if selectedTab == 2 {
                 Section("خلفية الآيات") {
                     if let image = selectedImage.flatMap({ NSImage(contentsOf: $0) }) ?? store.background {
                         Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().cornerRadius(10)
@@ -181,6 +194,7 @@ struct SettingsView: View {
                         if picker.runModal() == .OK { selectedImage = picker.url }
                     }
                 }
+                } else {
                 Section("عرض الآيات") {
                     Stepper("عدد الآيات: \(draft.count)", value: $draft.count, in: 1...20)
                     Toggle("إظهار الترجمة الإنجليزية", isOn: $draft.translation)
@@ -204,13 +218,15 @@ struct SettingsView: View {
                     Toggle("التشغيل عند تسجيل الدخول", isOn: $loginEnabled)
                     Text("ضع التطبيق في Applications. قد تحتاج للموافقة من إعدادات النظام ← عام ← عناصر الدخول.").font(.caption).foregroundStyle(.secondary)
                 }
+                }
             }.formStyle(.grouped)
             if let failure { Text(failure).foregroundStyle(.red).font(.caption) }
             HStack {
                 Button("حفظ وعرض الآيات", action: apply).buttonStyle(.borderedProminent)
                 Button("إلغاء") { dismiss() }
             }.controlSize(.large)
-        }.padding(24).frame(width: 600, height: 700).environment(\.layoutDirection, .rightToLeft)
+            }
+        }.padding(24).frame(width: 640, height: min(780, (NSScreen.main?.visibleFrame.height ?? 840) - 60)).environment(\.layoutDirection, .rightToLeft)
     }
     func apply() {
         do {

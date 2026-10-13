@@ -69,18 +69,22 @@ function New-SettingsWindow {
  </Window.Resources>
  <Grid Margin="28,22">
   <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-   <StackPanel Margin="0,0,0,16">
-    <TextBlock Text="على طريقتك" FontSize="27" FontWeight="SemiBold"/>
-    <Button Name="Memorization" Content="خطة الحفظ والمراجعة" Margin="0,12,0,0"/>
-    <TextBlock Text="اختَر خلفية تحبها، وابدأ من الآية اللي تناسبك." Foreground="#607D86" FontSize="14" Margin="0,5,0,22" TextWrapping="Wrap"/>
-    <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
-    <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
-     <Border Background="#660F2933" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="White" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
-    </Border>
-    <Button Name="ChooseImage" Content="اختيار صورة من الجهاز" HorizontalAlignment="Right"/>
-    <TextBlock Name="ImageName" Text="الخلفية الحالية" Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,22"/>
-    <Border Height="1" Background="#DCE8EC" Margin="0,0,0,20"/>
+  <TabControl Name="SettingsTabs" Background="Transparent" BorderThickness="0" Padding="0,18,0,0">
+   <TabControl.Resources>
+    <Style TargetType="TabItem">
+     <Setter Property="FontSize" Value="17"/><Setter Property="Padding" Value="24,12"/>
+     <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+      <Border Name="TabSurface" Background="#E4EFF2" CornerRadius="9" Padding="{TemplateBinding Padding}" Margin="4,0">
+       <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+      </Border>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="#24596A"/><Setter Property="Foreground" Value="White"/></Trigger>
+       <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabSurface" Property="BorderThickness" Value="2"/><Setter TargetName="TabSurface" Property="BorderBrush" Value="#31849A"/></Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate></Setter.Value></Setter>
+    </Style>
+   </TabControl.Resources>
+   <TabItem Header="القراءة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
     <TextBlock Text="عدد الآيات في كل تذكير" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <ComboBox Name="VerseCount" DisplayMemberPath="Label"/>
     <CheckBox Name="ShowTranslation" Content="إظهار الترجمة الإنجليزية" Margin="0,14,0,0" VerticalContentAlignment="Center"/>
@@ -100,8 +104,20 @@ function New-SettingsWindow {
       <ComboBox Name="Ayah" DisplayMemberPath="Label" IsEnabled="False"/></StackPanel>
     </Grid>
     <TextBlock Text="تقدمك محفوظ. تغيير البداية لا يحسب الآيات السابقة كمقروءة." Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,12,0,0"/>
-   </StackPanel>
-  </ScrollViewer>
+
+   </StackPanel></ScrollViewer></TabItem>
+   <TabItem Header="الحفظ" Name="MemorizationTab"/>
+   <TabItem Header="الخلفية"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
+    <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
+    <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
+     <Border Background="#660F2933" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="White" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+    </Border>
+    <Button Name="ChooseImage" Content="اختيار صورة من الجهاز" HorizontalAlignment="Right"/>
+    <TextBlock Name="ImageName" Text="الخلفية الحالية" Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,22"/>
+    <Border Height="1" Background="#DCE8EC" Margin="0,0,0,20"/>
+
+   </StackPanel></ScrollViewer></TabItem>
+  </TabControl>
   <Grid Grid.Row="1" Margin="0,14,0,0">
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <Button Name="Apply" Content="حفظ وعرض الآية" Background="#24596A" Foreground="White" BorderBrush="#24596A" FontWeight="SemiBold" IsDefault="True" Margin="0,0,12,0"/>
@@ -150,12 +166,13 @@ function Search-Surahs($settingsWindow) {
     $settingsWindow.FindName('SearchStatus').Text = ''
     if ($surahChoices.Items.Count -eq 0) { $settingsWindow.FindName('SearchStatus').Text = 'مفيش سورة بالاسم ده. جرّب اسم تاني أو امسح البحث.' }
 }
-function Show-Settings {
+function Show-Settings($selectedTab = 0) {
     $expiry.Stop()
     $timer.Stop()
     $settingsWindow = New-SettingsWindow
+    $settingsWindow.FindName('SettingsTabs').SelectedIndex = $selectedTab
     $settingsWindow.FindName('ImagePreview').Background = $window.FindName('BackgroundCard').Background
-    $settingsWindow.FindName('Memorization').Add_Click({ Show-MemorizationSettings })
+    $planWindow = Initialize-MemorizationTab $settingsWindow
     $selection = @{ ImagePath = $null }
     $countChoices = $settingsWindow.FindName('VerseCount')
     foreach ($count in 1..20) {
@@ -203,6 +220,18 @@ function Show-Settings {
             $settingsWindow.Close()
         } catch { [Windows.MessageBox]::Show($settingsWindow, $_.Exception.Message, 'تعذر حفظ الإعدادات') | Out-Null }
     })
-    $settingsWindow.ShowDialog() | Out-Null
+    $settingsWindow.FindName('SettingsTabs').Add_SelectionChanged({
+        if ($settingsWindow.FindName('SettingsTabs').SelectedIndex -eq 1) {
+            $settingsWindow.FindName('Apply').Visibility = [Windows.Visibility]::Collapsed
+            $settingsWindow.FindName('Cancel').Content = 'إغلاق'
+        } else {
+            $settingsWindow.FindName('Apply').Visibility = [Windows.Visibility]::Visible
+            $settingsWindow.FindName('Cancel').Content = 'إلغاء'
+        }
+    })
+    if ($selectedTab -eq 1) { $settingsWindow.FindName('Apply').Visibility = [Windows.Visibility]::Collapsed; $settingsWindow.FindName('Cancel').Content = 'إغلاق' }
+    $script:memorizationSettingsOpen = $true
+    try { $settingsWindow.ShowDialog() | Out-Null }
+    finally { $script:memorizationSettingsOpen = $false }
     Show-Verse
 }

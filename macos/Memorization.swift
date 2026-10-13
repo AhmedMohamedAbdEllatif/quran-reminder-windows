@@ -137,7 +137,7 @@ struct MemorizationSettingsView: View {
             }.formStyle(.grouped)
             if let failure { Text(failure).foregroundStyle(.red) }
             HStack { Button("حفظ الخطة", action: apply).buttonStyle(.borderedProminent); Button("إلغاء") { dismiss() } }.controlSize(.large)
-        }.padding(24).frame(width: 600, height: 640).environment(\.layoutDirection, .rightToLeft)
+        }.padding(24).environment(\.layoutDirection, .rightToLeft)
     }
     func apply() {
         do {
