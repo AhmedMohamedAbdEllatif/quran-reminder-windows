@@ -23,7 +23,8 @@ struct Preferences: Codable {
     var customBackground = false
 }
 func searchText(_ text: String) -> String {
-    text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: Locale(identifier: "ar"))
+    text.decomposedStringWithCanonicalMapping
+        .replacingOccurrences(of: "\\p{M}|[\\u06D6-\\u06ED]", with: "", options: .regularExpression)
         .replacingOccurrences(of: "ٱ", with: "ا").replacingOccurrences(of: "ى", with: "ي")
         .replacingOccurrences(of: "ـ", with: "")
 }
@@ -280,28 +281,31 @@ struct SettingsView: View {
 }
 
 @main enum QuranReminderEntry {
+@MainActor static func require(_ condition: Bool, _ scenario: String) throws {
+    if !condition { throw NSError(domain: "QuranReminderChecks", code: 1, userInfo: [NSLocalizedDescriptionKey: scenario]) }
+}
 @MainActor static func main() {
 if CommandLine.arguments.contains("--check") {
     do {
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = try ReadingStore(folder: temporary)
-        precondition(store.chapters.count == 114)
-        precondition(searchText(store.chapters[0].surah_name).contains(searchText("الفاتحة")))
+        try require(store.chapters.count == 114, "Expected all 114 surahs")
+        try require(searchText(store.chapters[0].surah_name).contains(searchText("الفاتحة")), "Unvocalized surah search failed")
         var batch = store.preferences
         batch.count = 3
         try store.save(batch)
-        precondition(store.displayed.map(\.number) == [1, 2, 3])
+        try require(store.displayed.map(\.number) == [1, 2, 3], "Group must contain the first three verses")
         try store.confirm()
-        precondition(store.preferences.index == 3 && store.preferences.readCount == 3)
+        try require(store.preferences.index == 3 && store.preferences.readCount == 3, "Group confirmation must advance by three")
         batch = store.preferences
         batch.index = 6234
         try store.save(batch)
-        precondition(store.displayed.count == 2)
+        try require(store.displayed.count == 2, "Final group must contain only two remaining verses")
         try store.confirm()
-        precondition(store.displayed.isEmpty)
+        try require(store.displayed.isEmpty, "No verses should remain after final confirmation")
         let restored = try ReadingStore(folder: temporary)
-        precondition(restored.preferences.index == 6236)
-        precondition(store.verses.allSatisfy { !$0.english.isEmpty && !$0.tafsir.isEmpty })
+        try require(restored.preferences.index == 6236, "Reading position must survive reopening")
+        try require(store.verses.allSatisfy { !$0.english.isEmpty && !$0.tafsir.isEmpty }, "Every verse needs translation and tafsir")
         print("macOS checks passed: full data, surah search, grouped reading, final batch and persistence.")
     } catch { fputs("\(error)\n", stderr); exit(1) }
 } else {
