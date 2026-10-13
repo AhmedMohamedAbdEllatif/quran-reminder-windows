@@ -264,7 +264,9 @@ struct SettingsView: View {
         window.orderOut(nil)
         timer?.invalidate()
         guard store.preferences.index < store.verses.count else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(store.preferences.interval), repeats: false) { [weak self] _ in self?.showReminder() }
+        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(store.preferences.interval), repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.showReminder() }
+        }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hideReminder(); return false }
     @objc func quit() { NSApplication.shared.terminate(nil) }
@@ -277,6 +279,8 @@ struct SettingsView: View {
     }
 }
 
+@main enum QuranReminderEntry {
+@MainActor static func main() {
 if CommandLine.arguments.contains("--check") {
     do {
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -306,4 +310,6 @@ if CommandLine.arguments.contains("--check") {
     application.setActivationPolicy(.accessory)
     application.delegate = controller
     application.run()
+}
+}
 }
