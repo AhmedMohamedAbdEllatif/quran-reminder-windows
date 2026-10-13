@@ -1,4 +1,8 @@
-# تذكير القرآن لويندوز
+# تذكير القرآن لويندوز والماك
+
+**نسخة macOS:** تطبيق أصلي لمعالجَي Apple Silicon وIntel، على macOS 13 أو أحدث. حمّل `QuranReminder-macOS.zip` من [الإصدارات](https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases)، وانقل التطبيق إلى Applications. التفاصيل وقيود التوقيع في [دليل macOS](macos/README.md).
+
+التعليمات التالية تخص نسخة ويندوز.
 
 تذكير بالآيات فوق نوافذ البرامج، مع ترجمة المعاني بالإنجليزية والتفسير الميسر بالعربية. يعمل دون إنترنت، ويضم ١١٤ سورة و٦٢٣٦ آية.
 
