@@ -2,7 +2,7 @@
 
 ترخيص MIT في هذا المستودع يخص ملفات البرنامج فقط، ولا يمنح ترخيصًا جديدًا للنصوص أو الصور التابعة لأصحابها.
 
-- النص العربي: `quran-uthmani`، من بيانات المشروع الأصلية، المصدر المسجل: https://api.alquran.cloud/v1/quran/quran-uthmani
+- النص العربي: Tanzil Uthmani 1.1 من https://tanzil.net/download/، نسخة أصلية كاملة في `tanzil-uthmani-1.1.txt` مع إشعار الحقوق الأصلي. نسخت حقول النص حرفيًا إلى `verses.json` مع مطابقة السورة والآية، دون تطبيع أو استبدال حروف يدوي.
 - التفسير العربي: التفسير الميسر، `ar.muyassar`، من بيانات المشروع الأصلية، المصدر المسجل: https://api.alquran.cloud/v1/quran/ar.muyassar
 - الترجمة الإنجليزية: Saheeh International، `en.sahih`، المصدر: https://api.alquran.cloud/v1/quran/en.sahih
 - `background.png`: الصورة المرجعية التي قدمها صاحب المشروع. لا تشملها رخصة الكود؛ لم يحدد الملف الأصلي اسم الفنان أو رخصة مستقلة.
