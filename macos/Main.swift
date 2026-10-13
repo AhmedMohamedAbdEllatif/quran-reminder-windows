@@ -178,9 +178,12 @@ struct SettingsView: View {
                 Text("الحفظ").tag(1)
                 Text("الخلفية").tag(2)
             }.pickerStyle(.segmented)
-            if selectedTab == 1 {
+            ZStack {
                 MemorizationSettingsView(store: memorization, chapters: store.chapters)
-            } else {
+                    .opacity(selectedTab == 1 ? 1 : 0)
+                    .allowsHitTesting(selectedTab == 1)
+                    .accessibilityHidden(selectedTab != 1)
+            VStack(alignment: .leading, spacing: 18) {
             Form {
                 if selectedTab == 2 {
                 Section("خلفية الآيات") {
@@ -225,6 +228,9 @@ struct SettingsView: View {
                 Button("حفظ وعرض الآيات", action: apply).buttonStyle(.borderedProminent)
                 Button("إلغاء") { dismiss() }
             }.controlSize(.large)
+            }.opacity(selectedTab == 1 ? 0 : 1)
+             .allowsHitTesting(selectedTab != 1)
+             .accessibilityHidden(selectedTab == 1)
             }
         }.padding(24).frame(width: 640, height: min(780, (NSScreen.main?.visibleFrame.height ?? 840) - 60)).environment(\.layoutDirection, .rightToLeft)
     }
