@@ -144,7 +144,8 @@ function Resize-Reminder {
     $window.FindName('VerseScroll').InvalidateMeasure()
 }
 function Show-Verse {
-    if ($script:memorizationWindow -and $script:memorizationWindow.IsVisible) { return }
+    if (($script:memorizationWindow -and $script:memorizationWindow.IsVisible) -or $script:memorizationSettingsOpen) { $script:readingPending = $true; return }
+    $script:readingPending = $false
     $timer.Stop()
     $expiry.Stop()
     $window.FindName('AdditionalVerses').Children.Clear()
@@ -201,7 +202,7 @@ $window.FindName('Tafsir').Add_Click({ Show-Tafsir })
 $window.FindName('Settings').Add_Click({ Show-Settings })
 $readButton.Add_Click({ Confirm-Reading })
 $window.FindName('Hide').Add_Click({ Hide-Verse })
-$timer.Add_Tick({ if (-not $script:memorizationWindow -or -not $script:memorizationWindow.IsVisible) { Show-Verse } })
+$timer.Add_Tick({ Show-Verse })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {

@@ -35,6 +35,7 @@ function Hide-Memorization {
     $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
     Save-Memorization $nextPlan
     if ($script:memorizationWindow) { $script:memorizationWindow.Hide() }
+    if ($script:readingPending) { Show-Verse }
 }
 function Confirm-Memorization {
     if (-not $script:memorizationWindow.IsVisible) { return }
@@ -45,6 +46,7 @@ function Confirm-Memorization {
     $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
     Save-Memorization $nextPlan
     $script:memorizationWindow.Hide()
+    if ($script:readingPending) { Show-Verse }
 }
 function New-MemorizationWindow {
     [xml]$markup = @'
@@ -160,7 +162,7 @@ function Show-MemorizationSettings {
             } catch { [Windows.MessageBox]::Show($planWindow, $_.Exception.Message, 'راجع إعدادات الحفظ') | Out-Null }
         })
         $planWindow.ShowDialog() | Out-Null
-    } finally { $script:memorizationSettingsOpen = $false }
+    } finally { $script:memorizationSettingsOpen = $false; if ($script:readingPending) { Show-Verse } }
 }
 function Start-MemorizationTimer {
     $script:memorizationTimer = [Windows.Threading.DispatcherTimer]::new()
