@@ -165,6 +165,7 @@ function Initialize-MemorizationTab($hostWindow) {
             } catch { [Windows.MessageBox]::Show($planWindow, $_.Exception.Message, 'راجع إعدادات الحفظ') | Out-Null }
         })
         $panel = $planWindow.Content
+        $panel.Margin = [Windows.Thickness]::new(8)
         $planWindow.Content = $null
         $hostWindow.FindName('MemorizationTab').Content = $panel
         return $planWindow

@@ -75,10 +75,10 @@ function New-SettingsWindow {
      <Setter Property="FontSize" Value="17"/><Setter Property="Padding" Value="24,12"/>
      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
       <Border Name="TabSurface" Background="#E4EFF2" CornerRadius="9" Padding="{TemplateBinding Padding}" Margin="4,0">
-       <ContentPresenter ContentSource="Header" HorizontalAlignment="Center"/>
+       <ContentPresenter Name="TabHeader" ContentSource="Header" HorizontalAlignment="Center"/>
       </Border>
       <ControlTemplate.Triggers>
-       <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="#24596A"/><Setter Property="Foreground" Value="White"/></Trigger>
+       <Trigger Property="IsSelected" Value="True"><Setter TargetName="TabSurface" Property="Background" Value="#24596A"/><Setter TargetName="TabHeader" Property="TextElement.Foreground" Value="White"/></Trigger>
        <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="TabSurface" Property="BorderThickness" Value="2"/><Setter TargetName="TabSurface" Property="BorderBrush" Value="#31849A"/></Trigger>
       </ControlTemplate.Triggers>
      </ControlTemplate></Setter.Value></Setter>
