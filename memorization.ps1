@@ -136,6 +136,7 @@ function Initialize-MemorizationTab($hostWindow) {
     $script:memorizationSettingsOpen = $true
     try {
         $planWindow = New-MemorizationSettingsWindow
+        $planWindow.Tag = $hostWindow
         $unitChoices = $planWindow.FindName('Unit')
         $unitChoices.Items.Clear()
         $unitChoices.DisplayMemberPath = 'Label'
@@ -165,7 +166,8 @@ function Initialize-MemorizationTab($hostWindow) {
                 if ($nextPlan.enabled -and $nextPlan.part_index -ge @(Get-MemorizationParts $nextPlan).Count) { throw 'الخطة مكتملة. فعّل ابدأ الخطة من أول الصفحة لإعادتها.' }
                 $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
                 Save-Memorization $nextPlan
-                $planWindow.FindName('Progress').Text = 'تم حفظ خطة الحفظ والمراجعة'
+                $planWindow.Tag.Tag = 'memorization-saved'
+                $planWindow.Tag.Close()
             } catch { [Windows.MessageBox]::Show($planWindow, $_.Exception.Message, 'راجع إعدادات الحفظ') | Out-Null }
         })
         $panel = $planWindow.Content

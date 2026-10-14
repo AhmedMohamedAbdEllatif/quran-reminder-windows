@@ -233,5 +233,8 @@ function Show-Settings($selectedTab = 0) {
     $script:memorizationSettingsOpen = $true
     try { $settingsWindow.ShowDialog() | Out-Null }
     finally { $script:memorizationSettingsOpen = $false }
+    if ($settingsWindow.Tag -eq 'memorization-saved') {
+        [Windows.MessageBox]::Show('تم حفظ خطة الحفظ والمراجعة.', 'تم حفظ الخطة', [Windows.MessageBoxButton]::OK, [Windows.MessageBoxImage]::Information) | Out-Null
+    }
     Show-Verse
 }
