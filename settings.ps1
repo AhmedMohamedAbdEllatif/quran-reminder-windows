@@ -50,8 +50,9 @@ function New-SettingsWindow {
        <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ChoiceSurface" Property="BorderBrush" Value="#31849A"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></ToggleButton.Template>
      </ToggleButton>
-     <TextBlock Margin="42,8,14,8" FlowDirection="RightToLeft" VerticalAlignment="Center" IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
+     <TextBlock Name="SelectedLabel" Margin="42,8,14,8" FlowDirection="RightToLeft" VerticalAlignment="Center" IsHitTestVisible="False" TextTrimming="CharacterEllipsis"
       Text="{Binding SelectedItem.Label, RelativeSource={RelativeSource TemplatedParent}}"/>
+     <TextBox Name="PART_EditableTextBox" Visibility="Collapsed" Margin="42,8,14,8" FlowDirection="RightToLeft" Background="Transparent" BorderThickness="0" VerticalContentAlignment="Center"/>
      <Popup Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
       <Border Background="White" FlowDirection="RightToLeft" BorderBrush="#C7DBE1" BorderThickness="1" CornerRadius="8" Padding="4"
        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
@@ -60,6 +61,7 @@ function New-SettingsWindow {
      </Popup>
     </Grid>
     <ControlTemplate.Triggers>
+     <Trigger Property="IsEditable" Value="True"><Setter TargetName="SelectedLabel" Property="Visibility" Value="Collapsed"/><Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/></Trigger>
      <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
      <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="Foreground" Value="#14738B"/></Trigger>
     </ControlTemplate.Triggers>
@@ -91,15 +93,11 @@ function New-SettingsWindow {
     <TextBlock Text="آيات متتالية، مع ترجمة ورقم كل آية. زر القراءة يؤكد المجموعة كلها." Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,20"/>
     <TextBlock Text="بداية القراءة" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <CheckBox Name="ChangeStart" Content="اختيار سورة وآية جديدة" Margin="0,0,0,16" VerticalContentAlignment="Center"/>
-    <TextBlock Text="ابحث باسم السورة أو رقمها" FontSize="13" Foreground="#607D86" Margin="0,0,0,6"/>
-    <Border Background="White" BorderBrush="#C7DBE1" BorderThickness="1" CornerRadius="9" Padding="12,9" Margin="0,0,0,6">
-     <TextBox Name="SurahSearch" IsEnabled="False" Background="Transparent" BorderThickness="0" FontSize="16"/>
-    </Border>
-    <TextBlock Name="SearchStatus" FontSize="12" Foreground="#607D86" Margin="0,0,0,10"/>
+    <TextBlock Text="اكتب اسم السورة داخل خانتها للبحث" FontSize="13" Foreground="#607D86" Margin="0,0,0,10"/>
     <Grid>
      <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
      <StackPanel><TextBlock Text="السورة" FontSize="13" Foreground="#607D86" Margin="0,0,0,6"/>
-      <ComboBox Name="Surah" DisplayMemberPath="Label" IsEnabled="False"/></StackPanel>
+      <ComboBox Name="Surah" DisplayMemberPath="Label" TextSearch.TextPath="Label" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True" IsEnabled="False"/></StackPanel>
      <StackPanel Grid.Column="2"><TextBlock Text="الآية" FontSize="13" Foreground="#607D86" Margin="0,0,0,6"/>
       <ComboBox Name="Ayah" DisplayMemberPath="Label" IsEnabled="False"/></StackPanel>
     </Grid>
@@ -148,23 +146,34 @@ function Get-SurahSearchText($searchText) {
     return $normalizedText.Replace('ٱ', 'ا').Replace('ى', 'ي').Trim()
 }
 function Search-Surahs($settingsWindow) {
-    $surahChoices = $settingsWindow.FindName('Surah')
-    $previousNumber = $surahChoices.SelectedItem.Number
-    $query = Get-SurahSearchText $settingsWindow.FindName('SurahSearch').Text
-    $surahChoices.Items.Clear()
-    foreach ($verse in $verses) {
-        if ($verse.ayah -ne 1) { continue }
-        $label = $verse.surah_number.ToString() + ' · ' + $verse.surah_name
-        if ((Get-SurahSearchText $label).Contains($query)) {
-            $surahChoices.Items.Add([pscustomobject]@{ Label = $label; Number = $verse.surah_number }) | Out-Null
-        }
+    $combo = $settingsWindow.FindName('Surah')
+    $typedText = $combo.Text
+    $query = Get-SurahSearchText $typedText
+    $view = [Windows.Data.CollectionViewSource]::GetDefaultView($combo.Items)
+    foreach ($choice in $combo.Items.SourceCollection) {
+        $choice | Add-Member -NotePropertyName SearchName -NotePropertyValue (Get-SurahSearchText $choice.Label) -Force
     }
-    $surahChoices.SelectedIndex = 0
-    foreach ($choice in $surahChoices.Items) {
-        if ($choice.Number -eq $previousNumber) { $surahChoices.SelectedItem = $choice; break }
-    }
-    $settingsWindow.FindName('SearchStatus').Text = ''
-    if ($surahChoices.Items.Count -eq 0) { $settingsWindow.FindName('SearchStatus').Text = 'مفيش سورة بالاسم ده. جرّب اسم تاني أو امسح البحث.' }
+    $predicate = { param($choice) $choice.SearchName.Contains($query) }.GetNewClosure()
+    $view.Filter = [Predicate[object]]$predicate
+    $combo.Text = $typedText
+}
+function Enable-SurahSearch($surface) {
+    $combo = $surface.FindName('Surah')
+    $combo.IsEditable = $true
+    $combo.IsTextSearchEnabled = $false
+    $combo.StaysOpenOnEdit = $true
+    [Windows.Controls.TextSearch]::SetTextPath($combo, 'Label')
+    $combo.Tag = @{ Updating = $false; Surface = $surface }
+    $combo.AddHandler([Windows.Controls.TextBox]::TextChangedEvent, [Windows.Controls.TextChangedEventHandler]{
+        param($sender, $eventArgs)
+        if ($sender.Tag.Updating -or -not $sender.IsKeyboardFocusWithin) { return }
+        $sender.Tag.Updating = $true
+        try {
+            if ($sender.SelectedItem -and $sender.Text -eq $sender.SelectedItem.Label) {
+                [Windows.Data.CollectionViewSource]::GetDefaultView($sender.Items).Filter = $null
+            } else { Search-Surahs $sender.Tag.Surface; $sender.IsDropDownOpen = $true }
+        } finally { $sender.Tag.Updating = $false }
+    })
 }
 function Show-Settings($selectedTab = 0) {
     $expiry.Stop()
@@ -189,11 +198,10 @@ function Show-Settings($selectedTab = 0) {
     $surahChoices.Add_SelectionChanged({ Update-AyahChoices $settingsWindow })
     $surahChoices.SelectedIndex = [int]$verses[[Math]::Min($script:currentIndex, $verses.Count - 1)].surah_number - 1
     $settingsWindow.FindName('Ayah').SelectedIndex = [int]$verses[[Math]::Min($script:currentIndex, $verses.Count - 1)].ayah - 1
-    $settingsWindow.FindName('SurahSearch').Add_TextChanged({ Search-Surahs $settingsWindow })
+    Enable-SurahSearch $settingsWindow
     $settingsWindow.FindName('ChangeStart').Add_Click({
         $surahChoices.IsEnabled = $settingsWindow.FindName('ChangeStart').IsChecked
         $settingsWindow.FindName('Ayah').IsEnabled = $surahChoices.IsEnabled
-        $settingsWindow.FindName('SurahSearch').IsEnabled = $surahChoices.IsEnabled
     })
     $settingsWindow.FindName('ChooseImage').Add_Click({
         $picker = [Microsoft.Win32.OpenFileDialog]::new()

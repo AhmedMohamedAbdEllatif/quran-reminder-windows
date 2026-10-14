@@ -233,17 +233,19 @@ if ($Check) {
     $settingsCheck.FindName('Surah').SelectedIndex = 0
     Update-AyahChoices $settingsCheck
     if ($settingsCheck.FindName('Ayah').Items.Count -ne 227) { throw 'Surah ayah choices mismatch.' }
-    $settingsCheck.FindName('SurahSearch').Text = 'الفاتحة'
+    $settingsCheck.FindName('Surah').Items.Clear()
+    foreach ($verse in $verses) { if ($verse.ayah -eq 1) { $settingsCheck.FindName('Surah').Items.Add([pscustomobject]@{Label=$verse.surah_name;Number=$verse.surah_number}) | Out-Null } }
+    $settingsCheck.FindName('Surah').Text = 'الفاتحة'
     Search-Surahs $settingsCheck
-    if ($settingsCheck.FindName('Surah').Items.Count -ne 1 -or $settingsCheck.FindName('Surah').SelectedItem.Number -ne 1) { throw 'Unvocalized surah search failed.' }
-    $settingsCheck.FindName('SurahSearch').Text = 'مريم'
+    if ($settingsCheck.FindName('Surah').Items.Count -ne 1 -or $settingsCheck.FindName('Surah').Items[0].Number -ne 1) { throw 'Unvocalized surah search failed.' }
+    $settingsCheck.FindName('Surah').Text = 'مريم'
     Search-Surahs $settingsCheck
-    if ($settingsCheck.FindName('Surah').SelectedItem.Number -ne 19) { throw 'Surah name search mismatch.' }
-    $settingsCheck.FindName('SurahSearch').Text = 'غيرموجود'
+    if ($settingsCheck.FindName('Surah').Items.Count -ne 1 -or $settingsCheck.FindName('Surah').Items[0].Number -ne 19) { throw 'Surah name search mismatch.' }
+    $settingsCheck.FindName('Surah').Text = 'غيرموجود'
     Search-Surahs $settingsCheck
     Update-AyahChoices $settingsCheck
     if ($settingsCheck.FindName('Surah').Items.Count -ne 0 -or $settingsCheck.FindName('Ayah').Items.Count -ne 0) { throw 'Empty search kept stale choices.' }
-    $settingsCheck.FindName('SurahSearch').Text = ''
+    $settingsCheck.FindName('Surah').Text = ''
     Search-Surahs $settingsCheck
     if ($settingsCheck.FindName('Surah').Items.Count -ne 114) { throw 'Clearing search did not restore all surahs.' }
     Set-CustomBackground (Join-Path $PSScriptRoot 'background.png')

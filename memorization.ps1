@@ -97,6 +97,7 @@ function Update-MemorizationPages($planWindow) {
     $chapter = $planWindow.FindName('Surah').SelectedItem.Number
     $pageChoices = $planWindow.FindName('Page')
     $pageChoices.Items.Clear()
+    if ($null -eq $chapter) { return }
     foreach ($page in $script:mushafPages) {
         $matches = @($page.lines.references | Where-Object { $_ -like ($chapter.ToString() + ':*') })
         if ($matches.Count -gt 0) { $pageChoices.Items.Add([pscustomobject]@{Label=('الصفحة ' + $page.number); Number=$page.number}) | Out-Null }
@@ -143,6 +144,7 @@ function Initialize-MemorizationTab($hostWindow) {
         foreach ($unitLabel in @('ثوانٍ','دقائق','ساعات')) { $unitChoices.Items.Add([pscustomobject]@{Label=$unitLabel}) | Out-Null }
         foreach ($verse in $verses) { if ($verse.ayah -eq 1) { $planWindow.FindName('Surah').Items.Add([pscustomobject]@{Label=$verse.surah_name;Number=$verse.surah_number}) | Out-Null } }
         $planWindow.FindName('Surah').Add_SelectionChanged({ Update-MemorizationPages $planWindow })
+        Enable-SurahSearch $planWindow
         $firstReference = $script:mushafPages[$script:memorization.page - 1].lines[0].references[0]
         $planWindow.FindName('Surah').SelectedIndex = [int]$firstReference.Split(':')[0] - 1
         foreach ($choice in $planWindow.FindName('Page').Items) { if ($choice.Number -eq $script:memorization.page) { $planWindow.FindName('Page').SelectedItem = $choice; break } }
