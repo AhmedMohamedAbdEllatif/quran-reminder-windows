@@ -61,6 +61,23 @@ struct SurahSelector: NSViewRepresentable {
     }
 }
 
+@MainActor func checkSurahSelectorInteraction(_ chapters: [Verse]) throws {
+    var selected = 1
+    var valid = true
+    let selector = SurahSelector(chapters: chapters, selection: Binding(get: { selected }, set: { selected = $0 }), validSelection: Binding(get: { valid }, set: { valid = $0 }))
+    let coordinator = SurahSelector.Coordinator(selector)
+    let combo = NSComboBox()
+    combo.usesDataSource = true
+    combo.dataSource = coordinator
+    combo.delegate = coordinator
+    combo.stringValue = "مريم"
+    coordinator.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: combo))
+    guard combo.numberOfItems == 1, !valid else { throw NSError(domain: "SurahSelectorCheck", code: 1) }
+    combo.selectItem(at: 0)
+    coordinator.comboBoxSelectionDidChange(Notification(name: NSComboBox.selectionDidChangeNotification, object: combo))
+    guard selected == 19, valid else { throw NSError(domain: "SurahSelectorCheck", code: 2) }
+}
+
 struct SaveConfirmationView: View {
     var body: some View {
         HStack(spacing: 16) {

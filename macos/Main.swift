@@ -288,6 +288,8 @@ struct SettingsView: View {
         status.menu = menu
         showReminder()
         if CommandLine.arguments.contains("--ui-check") {
+            do { try checkSurahSelectorInteraction(store.chapters) }
+            catch { fputs("Integrated selector interaction failed: \(error)\n", stderr); exit(1) }
             confirmation.show()
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                 guard let self, self.window.isVisible, !self.confirmation.isVisible else { fputs("macOS UI launch or toast dismissal failed\n", stderr); exit(1) }
