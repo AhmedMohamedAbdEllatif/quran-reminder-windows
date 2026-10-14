@@ -17,3 +17,18 @@ jobs:
         with:
           name: QuranReminder-macOS
           path: build/QuranReminder-macOS.zip
+  verify-intel:
+    needs: build
+    runs-on: macos-15-intel
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: QuranReminder-macOS
+          path: mac-build-download
+      - name: Verify packaged app on Intel macOS
+        run: |
+          ditto -x -k mac-build-download/QuranReminder-macOS.zip .
+          codesign --verify --deep --strict --verbose=2 "Quran Reminder.app"
+          "Quran Reminder.app/Contents/MacOS/QuranReminder" --check
+          "Quran Reminder.app/Contents/MacOS/QuranReminder" --ui-check
