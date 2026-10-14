@@ -105,6 +105,7 @@ struct MemorizationSessionView: View {
 struct MemorizationSettingsView: View {
     @ObservedObject var store: MemorizationStore
     let chapters: [Verse]
+    let saved: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var draft: MemorizationPlan
     @State private var chapter: Int
@@ -112,8 +113,10 @@ struct MemorizationSettingsView: View {
     @State private var intervalText: String
     @State private var unit = 0
     @State private var failure: String?
-    init(store: MemorizationStore, chapters: [Verse]) {
+    @State private var surahValid = true
+    init(store: MemorizationStore, chapters: [Verse], saved: @escaping () -> Void) {
         self.store = store; self.chapters = chapters
+        self.saved = saved
         _draft = State(initialValue: store.plan)
         let firstKey = store.pages[store.plan.page - 1].lines.first?.references.first ?? "1:1"
         _chapter = State(initialValue: Int(firstKey.split(separator: ":")[0]) ?? 1)
@@ -124,7 +127,7 @@ struct MemorizationSettingsView: View {
             Text("خطة حفظ مستقلة").font(.title.bold())
             Text("توقيت منفصل عن القراءة. التكرار يُسجل عند ضغط تمت المراجعة.").foregroundStyle(.secondary)
             Form {
-                Picker("السورة", selection: $chapter) { ForEach(chapters) { Text($0.surah_name).tag($0.surah_number) } }
+                SurahSelector(chapters: chapters, selection: $chapter, validSelection: $surahValid).frame(height: 32)
                     .onChange(of: chapter) { _ in if let first = store.pages(for: chapter).first { draft.page = first.number } }
                 Picker("الصفحة — مصحف المدينة", selection: $draft.page) { ForEach(store.pages(for: chapter)) { Text("الصفحة \($0.number)").tag($0.number) } }
                 Stepper("عدد الأسطر في كل جزء: \(draft.linesPerPart)", value: $draft.linesPerPart, in: 1...15)
@@ -141,6 +144,7 @@ struct MemorizationSettingsView: View {
     }
     func apply() {
         do {
+            guard surahValid else { failure = "اختَر سورة من نتائج البحث"; return }
             guard let enteredInterval = Double(intervalText), enteredInterval.isFinite else { failure = "اكتب وقتًا صحيحًا"; return }
             let seconds = enteredInterval * [1.0, 60.0, 3600.0][unit]
             guard (1...86400).contains(seconds) else { failure = "اختَر وقتًا من ثانية إلى ٢٤ ساعة"; return }
@@ -150,6 +154,7 @@ struct MemorizationSettingsView: View {
             draft.nextDue = Date().addingTimeInterval(TimeInterval(draft.interval))
             try store.save(draft)
             dismiss()
+            saved()
         } catch { failure = error.localizedDescription }
     }
 }

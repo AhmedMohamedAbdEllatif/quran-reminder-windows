@@ -34,6 +34,7 @@ func searchText(_ text: String) -> String {
     let folder: URL
     @Published private(set) var preferences: Preferences
     @Published var error: String?
+    var showSaveConfirmation: (() -> Void)?
     var displayed: [Verse] { Array(verses.dropFirst(preferences.index).prefix(preferences.count)) }
     var chapters: [Verse] { verses.filter { $0.ayah == 1 } }
     var background: NSImage? {
@@ -151,7 +152,7 @@ struct SettingsView: View {
     @State private var selectedTab: Int
     @Environment(\.dismiss) private var dismiss
     @State private var draft: Preferences
-    @State private var search = ""
+    @State private var surahValid = true
     @State private var changeStart = false
     @State private var chapter: Int
     @State private var ayah: Int
@@ -167,9 +168,6 @@ struct SettingsView: View {
         _chapter = State(initialValue: verse.surah_number)
         _ayah = State(initialValue: verse.ayah)
     }
-    var matchingChapters: [Verse] {
-        store.chapters.filter { search.isEmpty || searchText($0.surah_name).contains(searchText(search)) || String($0.surah_number).contains(search) }
-    }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("على طريقتك").font(.title.bold())
@@ -179,7 +177,7 @@ struct SettingsView: View {
                 Text("الخلفية").tag(2)
             }.pickerStyle(.segmented)
             ZStack {
-                MemorizationSettingsView(store: memorization, chapters: store.chapters)
+                MemorizationSettingsView(store: memorization, chapters: store.chapters, saved: { store.showSaveConfirmation?() })
                     .opacity(selectedTab == 1 ? 1 : 0)
                     .allowsHitTesting(selectedTab == 1)
                     .accessibilityHidden(selectedTab != 1)
@@ -207,11 +205,8 @@ struct SettingsView: View {
                 Section("بداية القراءة") {
                     Toggle("اختيار سورة وآية جديدة", isOn: $changeStart)
                     if changeStart {
-                        TextField("ابحث باسم السورة أو رقمها", text: $search)
-                        Picker("السورة", selection: $chapter) {
-                            ForEach(matchingChapters) { Text("\($0.surah_number) · \($0.surah_name)").tag($0.surah_number) }
-                        }.onChange(of: chapter) { _ in ayah = 1 }
-                        if matchingChapters.isEmpty { Text("لا توجد سورة مطابقة").foregroundStyle(.secondary) }
+                        SurahSelector(chapters: store.chapters, selection: $chapter, validSelection: $surahValid)
+                            .frame(height: 32).onChange(of: chapter) { _ in ayah = 1 }
                         Picker("الآية", selection: $ayah) {
                             ForEach(store.verses.filter { $0.surah_number == chapter }) { Text("الآية \($0.ayah)").tag($0.ayah) }
                         }
@@ -237,7 +232,7 @@ struct SettingsView: View {
     func apply() {
         do {
             if changeStart {
-                guard matchingChapters.contains(where: { $0.surah_number == chapter }),
+                guard surahValid,
                       let verse = store.verses.first(where: { $0.surah_number == chapter && $0.ayah == ayah }) else {
                     failure = "اختَر سورة وآية من نتائج البحث"; return
                 }
@@ -260,9 +255,15 @@ struct SettingsView: View {
     private var memorization: MemorizationStore!
     private var memorizationWindow: NSWindow!
     private var memorizationTimer: Timer?
+    private let confirmation = SaveConfirmationController()
     func applicationDidFinishLaunching(_ notification: Notification) {
-        do { store = try ReadingStore(); memorization = try MemorizationStore(folder: store.folder) }
+        do {
+            let checkFolder = CommandLine.arguments.contains("--ui-check") ? FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString) : nil
+            store = try ReadingStore(folder: checkFolder)
+            memorization = try MemorizationStore(folder: store.folder)
+        }
         catch { showFatal(error); return }
+        store.showSaveConfirmation = { [weak self] in self?.confirmation.show() }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = "تذكير القرآن"
         window.isReleasedWhenClosed = false
@@ -286,6 +287,14 @@ struct SettingsView: View {
         for item in menu.items { item.target = self }
         status.menu = menu
         showReminder()
+        if CommandLine.arguments.contains("--ui-check") {
+            confirmation.show()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                guard let self, self.window.isVisible, !self.confirmation.isVisible else { fputs("macOS UI launch or toast dismissal failed\n", stderr); exit(1) }
+                print("macOS UI check passed: native reading window launched and confirmation dismissed automatically.")
+                NSApplication.shared.terminate(nil)
+            }
+        }
     }
     @objc func showReminder() {
         if memorizationWindow.isVisible {
@@ -336,6 +345,9 @@ if CommandLine.arguments.contains("--check") {
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = try ReadingStore(folder: temporary)
         try require(store.chapters.count == 114, "Expected all 114 surahs")
+        try require(matchingSurahs(store.chapters, query: "مريم").map(\.surah_number) == [19], "Integrated name filtering failed")
+        try require(matchingSurahs(store.chapters, query: "19").map(\.surah_number) == [19], "Integrated number filtering failed")
+        try require(matchingSurahs(store.chapters, query: "غيرموجود").isEmpty, "Unknown surah must have no matches")
         try require(searchText(store.chapters[0].surah_name).contains(searchText("الفاتحة")), "Unvocalized surah search failed")
         var batch = store.preferences
         batch.count = 3
