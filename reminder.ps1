@@ -25,7 +25,12 @@ foreach ($verse in $verses) {
     if ([string]::IsNullOrWhiteSpace($verse.english)) { throw 'Missing English translation.' }
     if ([string]::IsNullOrWhiteSpace($verse.tafsir)) { throw 'Missing Arabic tafsir.' }
 }
-$interval = [Math]::Max(10, [int]$config.interval_seconds)
+$script:readingIntervalSeconds = 300
+if ($config.interval_seconds -ge 10) { $script:readingIntervalSeconds = [int]$config.interval_seconds }
+if ($null -ne $preferences -and $null -ne $preferences.reading_interval_seconds) {
+    if ($preferences.reading_interval_seconds -lt 10 -or $preferences.reading_interval_seconds -gt 86400) { throw 'Invalid reading interval.' }
+    $script:readingIntervalSeconds = [int]$preferences.reading_interval_seconds
+}
 $fontSize = [Math]::Min(64, [Math]::Max(18, [int]$config.font_size))
 $script:readCount = 0
 $script:currentIndex = 0
@@ -100,7 +105,7 @@ $reference = $window.FindName('Reference')
 $progressText = $window.FindName('Progress')
 $readButton = $window.FindName('Read')
 $timer = [Windows.Threading.DispatcherTimer]::new()
-$timer.Interval = [TimeSpan]::FromSeconds($interval)
+$timer.Interval = [TimeSpan]::FromSeconds($script:readingIntervalSeconds)
 $expiry = [Windows.Threading.DispatcherTimer]::new()
 $expiry.Interval = [TimeSpan]::FromSeconds([Math]::Max(1, [int]$config.auto_hide_seconds))
 function Hide-Verse {
@@ -251,7 +256,12 @@ if ($Check) {
     Set-CustomBackground (Join-Path $PSScriptRoot 'background.png')
     if (-not (Test-Path $customBackgroundPath)) { throw 'Custom background was not saved.' }
     Update-Background
+    if ($script:readingIntervalSeconds -ne 300) { throw 'Default reading interval must be five minutes.' }
+    Save-DisplayPreferences @{ verses_per_reminder = 1; show_translation = $true; reading_interval_seconds = 420 }
+    if ($timer.Interval.TotalSeconds -ne 420) { throw 'Reading timer was not updated.' }
     Set-VersesPerReminder 3
+    $intervalRecord = Get-Content $preferencesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($intervalRecord.reading_interval_seconds -ne 420) { throw 'Reading interval was not preserved.' }
     Set-StartingVerse 0
     Show-Verse
     Save-DisplayPreferences @{ verses_per_reminder = 3; show_translation = $false }

@@ -10,6 +10,8 @@ function Set-VersesPerReminder($verseCount) {
 function Save-DisplayPreferences($readingPreferences) {
     if ($readingPreferences.verses_per_reminder -lt 1 -or $readingPreferences.verses_per_reminder -gt 20) { throw 'Choose between 1 and 20 verses.' }
     if ($readingPreferences.show_translation -isnot [bool]) { throw 'Invalid translation preference.' }
+    if (-not $readingPreferences.ContainsKey('reading_interval_seconds')) { $readingPreferences.reading_interval_seconds = $script:readingIntervalSeconds }
+    if ($readingPreferences.reading_interval_seconds -lt 10 -or $readingPreferences.reading_interval_seconds -gt 86400) { throw 'اختَر وقتًا بين دقيقة و١٤٤٠ دقيقة.' }
     $serializedPreferences = $readingPreferences | ConvertTo-Json
     $pendingPreferencesPath = $preferencesPath + '.tmp'
     [IO.File]::WriteAllText($pendingPreferencesPath, $serializedPreferences, [Text.Encoding]::UTF8)
@@ -17,6 +19,8 @@ function Save-DisplayPreferences($readingPreferences) {
     else { [IO.File]::Move($pendingPreferencesPath, $preferencesPath) }
     $script:versesPerReminder = $readingPreferences.verses_per_reminder
     $script:showTranslation = $readingPreferences.show_translation
+    $script:readingIntervalSeconds = [int]$readingPreferences.reading_interval_seconds
+    $timer.Interval = [TimeSpan]::FromSeconds($script:readingIntervalSeconds)
 }
 function Set-CustomBackground($imagePath) {
     $validatedImage = Get-BackgroundImage $imagePath
@@ -87,6 +91,9 @@ function New-SettingsWindow {
     </Style>
    </TabControl.Resources>
    <TabItem Header="القراءة"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
+    <TextBlock Text="الفاصل بين تذكيرات القراءة (بالدقائق)" FontWeight="SemiBold" Margin="0,0,0,10"/>
+    <TextBox Name="ReadingInterval" MinHeight="46" Padding="12,8" Background="White" BorderBrush="#C7DBE1" VerticalContentAlignment="Center"/>
+    <TextBlock Text="الافتراضي ٥ دقائق. غيّره كما يناسبك؛ وقت الحفظ مستقل." Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,20"/>
     <TextBlock Text="عدد الآيات في كل تذكير" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <ComboBox Name="VerseCount" DisplayMemberPath="Label"/>
     <CheckBox Name="ShowTranslation" Content="إظهار الترجمة الإنجليزية" Margin="0,14,0,0" VerticalContentAlignment="Center"/>
@@ -183,6 +190,7 @@ function Show-Settings($selectedTab = 0) {
     $settingsWindow.FindName('ImagePreview').Background = $window.FindName('BackgroundCard').Background
     $planWindow = Initialize-MemorizationTab $settingsWindow
     $selection = @{ ImagePath = $null }
+    $settingsWindow.FindName('ReadingInterval').Text = ($script:readingIntervalSeconds / 60).ToString([Globalization.CultureInfo]::CurrentCulture)
     $countChoices = $settingsWindow.FindName('VerseCount')
     foreach ($count in 1..20) {
         $countChoices.Items.Add([pscustomobject]@{ Label = ($count.ToString() + ' آية'); Count = $count }) | Out-Null
@@ -220,7 +228,9 @@ function Show-Settings($selectedTab = 0) {
     $settingsWindow.FindName('Apply').Add_Click({
         try {
             if ($settingsWindow.FindName('ChangeStart').IsChecked -and $null -eq $settingsWindow.FindName('Ayah').SelectedItem) { throw 'اختَر سورة وآية صحيحة قبل الحفظ.' }
-            Save-DisplayPreferences @{ verses_per_reminder = $countChoices.SelectedItem.Count; show_translation = [bool]$settingsWindow.FindName('ShowTranslation').IsChecked }
+            $readingMinutes = 0.0
+            if (-not [double]::TryParse($settingsWindow.FindName('ReadingInterval').Text, [ref]$readingMinutes) -or [double]::IsNaN($readingMinutes) -or $readingMinutes -lt 1 -or $readingMinutes -gt 1440) { throw 'اختَر وقتًا بين دقيقة و١٤٤٠ دقيقة.' }
+            Save-DisplayPreferences @{ reading_interval_seconds = [int]($readingMinutes * 60); verses_per_reminder = $countChoices.SelectedItem.Count; show_translation = [bool]$settingsWindow.FindName('ShowTranslation').IsChecked }
             if ($selection.ImagePath) { Set-CustomBackground $selection.ImagePath }
             if ($settingsWindow.FindName('ChangeStart').IsChecked) {
                 Set-StartingVerse $settingsWindow.FindName('Ayah').SelectedItem.Index
