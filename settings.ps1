@@ -235,6 +235,7 @@ function Show-Settings($selectedTab = 0) {
             if ($settingsWindow.FindName('ChangeStart').IsChecked) {
                 Set-StartingVerse $settingsWindow.FindName('Ayah').SelectedItem.Index
             }
+            $settingsWindow.Tag = 'reading-saved'
             $settingsWindow.Close()
         } catch { [Windows.MessageBox]::Show($settingsWindow, $_.Exception.Message, 'تعذر حفظ الإعدادات') | Out-Null }
     })
@@ -252,7 +253,10 @@ function Show-Settings($selectedTab = 0) {
     try { $settingsWindow.ShowDialog() | Out-Null }
     finally { $script:memorizationSettingsOpen = $false }
     if ($settingsWindow.Tag -eq 'memorization-saved') {
-        Show-SaveConfirmation
+        if ($script:memorization.enabled) { Show-SaveConfirmation 'خطة الحفظ اشتغلت' ('أول تذكير بعد ' + (Get-IntervalLabel $script:memorization.interval_seconds) + '.') }
+        else { Show-SaveConfirmation 'تم حفظ الخطة متوقفة' 'التذكير بالحفظ غير مفعّل. فعّله من تبويب الحفظ لتبدأ.' }
+    } elseif ($settingsWindow.Tag -eq 'reading-saved') {
+        Show-SaveConfirmation 'تم حفظ الإعدادات' ('وقت القراءة: ' + (Get-IntervalLabel $script:readingIntervalSeconds) + ' بعد إخفاء الآيات أو تأكيد قراءتها.')
     }
     Show-Verse
 }

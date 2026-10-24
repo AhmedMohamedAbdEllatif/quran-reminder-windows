@@ -79,12 +79,14 @@ struct SurahSelector: NSViewRepresentable {
 }
 
 struct SaveConfirmationView: View {
+    let title: String
+    let message: String
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "checkmark.circle.fill").font(.system(size: 36)).foregroundStyle(Color(red: 0.14, green: 0.35, blue: 0.42))
             VStack(alignment: .leading, spacing: 5) {
-                Text("تم حفظ الخطة").font(.system(size: 18, weight: .semibold))
-                Text("إعدادات الحفظ والمراجعة اتحفظت.").font(.system(size: 14)).foregroundStyle(.secondary)
+                Text(title).font(.system(size: 18, weight: .semibold))
+                Text(message).font(.system(size: 14)).foregroundStyle(.secondary)
             }
         }.padding(22).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(red: 0.96, green: 0.98, blue: 0.98))
@@ -97,7 +99,7 @@ struct SaveConfirmationView: View {
     private var panel: NSPanel?
     private var dismissal: DispatchWorkItem?
     var isVisible: Bool { panel?.isVisible ?? false }
-    func show() {
+    func show(title: String = "تم حفظ التغييرات", message: String = "تم حفظ إعداداتك.") {
         dismissal?.cancel()
         panel?.close()
         let frame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
@@ -108,7 +110,7 @@ struct SaveConfirmationView: View {
         toast.hasShadow = true
         toast.level = .floating
         toast.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        toast.contentView = NSHostingView(rootView: SaveConfirmationView())
+        toast.contentView = NSHostingView(rootView: SaveConfirmationView(title: title, message: message))
         toast.orderFrontRegardless()
         panel = toast
         let work = DispatchWorkItem { [weak toast] in toast?.close() }

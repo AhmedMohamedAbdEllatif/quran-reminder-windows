@@ -17,8 +17,8 @@ function New-SaveConfirmationWindow {
     <TextBlock Text="✓" Foreground="White" FontSize="25" HorizontalAlignment="Center" VerticalAlignment="Center"/>
    </Border>
    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-    <TextBlock Text="تم حفظ الخطة" Foreground="#193E49" FontSize="18" FontWeight="SemiBold"/>
-    <TextBlock Text="إعدادات الحفظ والمراجعة اتحفظت." Foreground="#607D86" FontSize="14" Margin="0,5,0,0" TextWrapping="Wrap"/>
+    <TextBlock Name="ConfirmationTitle" Text="تم حفظ الخطة" Foreground="#193E49" FontSize="18" FontWeight="SemiBold"/>
+    <TextBlock Name="ConfirmationMessage" Text="إعدادات الحفظ والمراجعة اتحفظت." Foreground="#607D86" FontSize="14" Margin="0,5,0,0" TextWrapping="Wrap"/>
    </StackPanel>
   </Grid>
  </Border>
@@ -28,9 +28,17 @@ function New-SaveConfirmationWindow {
     Initialize-WindowStyle $toast
     return $toast
 }
-function Show-SaveConfirmation {
+function Get-IntervalLabel($seconds) {
+    if ($seconds % 3600 -eq 0) { return (($seconds / 3600).ToString() + ' ساعة') }
+    if ($seconds % 60 -eq 0) { return (($seconds / 60).ToString() + ' دقيقة') }
+    return ($seconds.ToString() + ' ثانية')
+}
+function Show-SaveConfirmation($title, $message) {
     if ($script:saveConfirmation) { $script:saveConfirmation.Close() }
     $script:saveConfirmation = New-SaveConfirmationWindow
+    $script:saveConfirmation.Title = $title
+    $script:saveConfirmation.FindName('ConfirmationTitle').Text = $title
+    $script:saveConfirmation.FindName('ConfirmationMessage').Text = $message
     $area = [Windows.SystemParameters]::WorkArea
     $script:saveConfirmation.Width = [Math]::Min(440, $area.Width - 36)
     $script:saveConfirmation.Left = $area.Right - $script:saveConfirmation.Width - 18

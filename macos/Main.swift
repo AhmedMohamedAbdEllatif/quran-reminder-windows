@@ -35,7 +35,7 @@ func searchText(_ text: String) -> String {
     let folder: URL
     @Published private(set) var preferences: Preferences
     @Published var error: String?
-    var showSaveConfirmation: (() -> Void)?
+    var showSaveConfirmation: ((String, String) -> Void)?
     var displayed: [Verse] { Array(verses.dropFirst(preferences.index).prefix(preferences.count)) }
     var chapters: [Verse] { verses.filter { $0.ayah == 1 } }
     var background: NSImage? {
@@ -178,7 +178,11 @@ struct SettingsView: View {
                 Text("الخلفية").tag(2)
             }.pickerStyle(.segmented)
             ZStack {
-                MemorizationSettingsView(store: memorization, chapters: store.chapters, saved: { store.showSaveConfirmation?() })
+                MemorizationSettingsView(store: memorization, chapters: store.chapters, saved: {
+                    let title = memorization.plan.enabled ? "خطة الحفظ اشتغلت" : "تم حفظ الخطة متوقفة"
+                    let message = memorization.plan.enabled ? "أول تذكير بعد \(memorization.plan.interval) ثانية." : "التذكير بالحفظ غير مفعّل. فعّله من تبويب الحفظ لتبدأ."
+                    store.showSaveConfirmation?(title, message)
+                })
                     .opacity(selectedTab == 1 ? 1 : 0)
                     .allowsHitTesting(selectedTab == 1)
                     .accessibilityHidden(selectedTab != 1)
@@ -244,6 +248,7 @@ struct SettingsView: View {
             if !loginEnabled && SMAppService.mainApp.status != .notRegistered { try SMAppService.mainApp.unregister() }
             try store.save(draft)
             dismiss()
+            store.showSaveConfirmation?("تم حفظ الإعدادات", "وقت القراءة: \(draft.interval / 60) دقيقة بعد إخفاء الآيات أو تأكيد قراءتها.")
         } catch { failure = error.localizedDescription }
     }
 }
@@ -264,7 +269,7 @@ struct SettingsView: View {
             memorization = try MemorizationStore(folder: store.folder)
         }
         catch { showFatal(error); return }
-        store.showSaveConfirmation = { [weak self] in self?.confirmation.show() }
+        store.showSaveConfirmation = { [weak self] title, message in self?.confirmation.show(title: title, message: message) }
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         window.title = "تذكير القرآن"
         window.isReleasedWhenClosed = false
