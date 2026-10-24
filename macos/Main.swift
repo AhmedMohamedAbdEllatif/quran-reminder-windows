@@ -313,12 +313,13 @@ struct SettingsView: View {
             } catch { fputs("Memorization schedule setup failed: \(error)\n", stderr); exit(1) }
             confirmation.show()
             let settingsProbe = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 240), styleMask: [.titled], backing: .buffered, defer: false)
-            window.beginSheet(settingsProbe)
+            window.beginSheet(settingsProbe) { [weak self] _ in
+                Task { @MainActor in self?.scheduleMemorization() }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
                 guard let self, !self.memorizationWindow.isVisible else { fputs("Memorization interrupted settings\n", stderr); exit(1) }
                 self.window.endSheet(settingsProbe)
                 settingsProbe.orderOut(nil)
-                self.scheduleMemorization()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                 guard let self, self.window.isVisible, !self.confirmation.isVisible else { fputs("macOS UI launch or toast dismissal failed\n", stderr); exit(1) }
