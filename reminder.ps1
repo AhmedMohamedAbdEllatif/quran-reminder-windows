@@ -302,7 +302,13 @@ if ($Check) {
     $timer.Stop()
     $readingCountBeforeMemo = $script:readCount
     $testPlan = [pscustomobject]@{enabled=$true;page=3;lines_per_part=4;repeat_count=2;interval_seconds=17;part_index=0;confirmed_repeats=0;next_due_unix=0}
+    $testPlan.enabled = $false
     Save-Memorization $testPlan
+    $planHost = New-SettingsWindow
+    $planWindow = Initialize-MemorizationTab $planHost
+    if (-not $planWindow.FindName('Enabled').IsChecked) { throw 'Saving a new plan would leave reminders disabled.' }
+    $planWindow.FindName('Save').RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
+    if (-not $script:memorization.enabled -or $planHost.Tag -ne 'memorization-saved') { throw 'Saving the plan did not enable reminders.' }
     $memoParts = @(Get-MemorizationParts $script:memorization)
     if ($memoParts.Count -ne 4 -or $memoParts[3].lines.Count -ne 3) { throw 'Page was not divided into 4+4+4+3 actual lines.' }
     Show-Verse
