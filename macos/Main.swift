@@ -32,22 +32,26 @@ func searchText(_ text: String) -> String {
 
 @MainActor final class ReadingStore: ObservableObject {
     let verses: [Verse]
+    let chapters: [Verse]
+    private var backgroundImage: NSImage?
     let folder: URL
     @Published private(set) var preferences: Preferences
     @Published var error: String?
     var showSaveConfirmation: ((String, String) -> Void)?
     var displayed: [Verse] { Array(verses.dropFirst(preferences.index).prefix(preferences.count)) }
-    var chapters: [Verse] { verses.filter { $0.ayah == 1 } }
     var background: NSImage? {
+        if let backgroundImage { return backgroundImage }
         let custom = folder.appendingPathComponent("background.png")
         let bundled = Bundle.main.url(forResource: "background", withExtension: "png")
-        return (preferences.customBackground ? custom : bundled).flatMap { NSImage(contentsOf: $0) }
+        backgroundImage = (preferences.customBackground ? custom : bundled).flatMap { NSImage(contentsOf: $0) }
+        return backgroundImage
     }
     init(folder: URL? = nil) throws {
         guard let resource = Bundle.main.url(forResource: "verses", withExtension: "json") else {
             throw NSError(domain: "QuranReminder", code: 1, userInfo: [NSLocalizedDescriptionKey: "ملف الآيات غير موجود"])
         }
         verses = try JSONDecoder().decode(Quran.self, from: Data(contentsOf: resource)).verses
+        chapters = verses.filter { $0.ayah == 1 }
         guard verses.count == 6236, verses.enumerated().allSatisfy({ $0.element.number == $0.offset + 1 }) else {
             throw NSError(domain: "QuranReminder", code: 2, userInfo: [NSLocalizedDescriptionKey: "بيانات القرآن غير كاملة"])
         }
@@ -66,6 +70,7 @@ func searchText(_ text: String) -> String {
     func save(_ next: Preferences) throws {
         try validate(next)
         try JSONEncoder().encode(next).write(to: folder.appendingPathComponent("preferences.json"), options: .atomic)
+        if preferences.customBackground != next.customBackground { backgroundImage = nil }
         preferences = next
     }
     func confirm() throws {
@@ -80,6 +85,7 @@ func searchText(_ text: String) -> String {
             throw NSError(domain: "QuranReminder", code: 4, userInfo: [NSLocalizedDescriptionKey: "اختَر صورة PNG أو JPG سليمة"])
         }
         try png.write(to: folder.appendingPathComponent("background.png"), options: .atomic)
+        backgroundImage = image
     }
 }
 
@@ -283,8 +289,9 @@ struct SettingsView: View {
         memorizationWindow.title = "الحفظ والمراجعة"
         memorizationWindow.level = .floating
         memorizationWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        memorizationWindow.contentView = NSHostingView(rootView: MemorizationSessionView(store: memorization, dismissWindow: { [weak self] in self?.memorizationWindow.orderOut(nil) }))
-        memorizationTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in Task { @MainActor in self?.showDueMemorization() } }
+        memorizationWindow.contentView = NSHostingView(rootView: MemorizationSessionView(store: memorization, dismissWindow: { [weak self] in self?.memorizationWindow.orderOut(nil); self?.scheduleMemorization() }))
+        memorization.scheduleChanged = { [weak self] in self?.scheduleMemorization() }
+        scheduleMemorization()
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         status.button?.title = "☾"
         status.button?.toolTip = "تذكير القرآن"
@@ -354,6 +361,17 @@ struct SettingsView: View {
         else { showReminder() }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hideReminder(); return false }
+    func scheduleMemorization() {
+        memorizationTimer?.invalidate()
+        guard memorization.plan.enabled else { return }
+        let remaining = memorizationWindow.isVisible ? 30 : memorization.plan.nextDue.timeIntervalSinceNow
+        memorizationTimer = Timer.scheduledTimer(withTimeInterval: max(1, min(30, remaining)), repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                self?.showDueMemorization()
+                self?.scheduleMemorization()
+            }
+        }
+    }
     func showDueMemorization() {
         guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
         if let screen = NSScreen.main { memorizationWindow.setContentSize(NSSize(width: min(940, screen.visibleFrame.width - 40), height: min(620, screen.visibleFrame.height - 80))) }

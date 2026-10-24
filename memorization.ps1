@@ -28,6 +28,7 @@ function Save-Memorization($plan) {
     if (Test-Path $memorizationPath) { [IO.File]::Replace($pending, $memorizationPath, $memorizationPath + '.bak') }
     else { [IO.File]::Move($pending, $memorizationPath) }
     $script:memorization = $plan
+    Update-MemorizationTimer
 }
 function Get-MemorizationCopy { return ($script:memorization | ConvertTo-Json | ConvertFrom-Json) }
 function Hide-Memorization {
@@ -35,6 +36,7 @@ function Hide-Memorization {
     $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
     Save-Memorization $nextPlan
     if ($script:memorizationWindow) { $script:memorizationWindow.Hide() }
+    Update-MemorizationTimer
     if ($script:readingPending) { Show-Verse }
 }
 function Confirm-Memorization {
@@ -46,6 +48,7 @@ function Confirm-Memorization {
     $nextPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $nextPlan.interval_seconds
     Save-Memorization $nextPlan
     $script:memorizationWindow.Hide()
+    Update-MemorizationTimer
     if ($script:readingPending) { Show-Verse }
 }
 function New-MemorizationWindow {
@@ -191,10 +194,19 @@ function Show-DueMemorization {
     if ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() -lt $script:memorization.next_due_unix) { return }
     Show-Memorization
 }
+function Update-MemorizationTimer {
+    if (-not $script:memorizationTimer) { return }
+    $script:memorizationTimer.Stop()
+    if (-not $script:memorization.enabled) { return }
+    $remaining = $script:memorization.next_due_unix - [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    if (($script:memorizationWindow -and $script:memorizationWindow.IsVisible) -or $script:memorizationSettingsOpen) { $remaining = 30 }
+    $script:memorizationTimer.Interval = [TimeSpan]::FromSeconds([Math]::Max(1, [Math]::Min(30, $remaining)))
+    $script:memorizationTimer.Start()
+}
 function Start-MemorizationTimer {
     $script:memorizationTimer = [Windows.Threading.DispatcherTimer]::new()
     $script:memorizationTimer.Interval = [TimeSpan]::FromSeconds(1)
-    $script:memorizationTimer.Add_Tick({ Show-DueMemorization })
-    $script:memorizationTimer.Start()
+    $script:memorizationTimer.Add_Tick({ Show-DueMemorization; Update-MemorizationTimer })
+    Update-MemorizationTimer
 }
 Assert-MemorizationPlan $script:memorization

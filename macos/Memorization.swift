@@ -25,6 +25,7 @@ struct MemorizationPlan: Codable {
 }
 @MainActor final class MemorizationStore: ObservableObject {
     let pages: [MushafPage]
+    var scheduleChanged: (() -> Void)?
     private let stateFile: URL
     @Published private(set) var plan: MemorizationPlan
     var parts: [[MushafLine]] { chunks(for: plan) }
@@ -61,6 +62,7 @@ struct MemorizationPlan: Codable {
         try validate(candidate)
         try JSONEncoder().encode(candidate).write(to: stateFile, options: .atomic)
         plan = candidate
+        scheduleChanged?()
     }
     func confirm() throws {
         guard !currentLines.isEmpty else { return }
