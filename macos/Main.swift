@@ -312,9 +312,11 @@ struct SettingsView: View {
             updates.accept(futureUpdate)
             guard updates.isNoticeVisible else { fputs("Update notice failed to open\n", stderr); exit(1) }
             updates.dismissNotice()
-            updates.accept(futureUpdate)
-            guard !updates.isNoticeVisible else { fputs("Update notice was repeated\n", stderr); exit(1) }
+            let restoredUpdates = UpdateChecker(defaults: updateDefaults)
+            restoredUpdates.accept(futureUpdate)
+            guard !restoredUpdates.isNoticeVisible else { fputs("Update notice was repeated\n", stderr); exit(1) }
             updates.retryLater("Offline test")
+            guard let retryDate = updateDefaults.object(forKey: "updates.nextCheck") as? Date, (3500...3700).contains(retryDate.timeIntervalSinceNow) else { fputs("Update retry was not scheduled\n", stderr); exit(1) }
             do { try checkSurahSelectorInteraction(store.chapters) }
             catch { fputs("Integrated selector interaction failed: \(error)\n", stderr); exit(1) }
             do {

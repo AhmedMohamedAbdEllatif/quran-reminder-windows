@@ -27,6 +27,9 @@ function Test-ReminderAppearance($destination) {
     $settingsPreview.FindName('ShowTranslation').IsChecked = $true
     Export-WindowPreview $settingsPreview (Join-Path $destination 'settings-small.png')
     $settingsPreview.Close()
+    $updatePreview = New-UpdateNotice ([pscustomobject]@{Tag='v1.7.0';Url='https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/v1.7.0'})
+    Export-WindowPreview $updatePreview (Join-Path $destination 'update-notice.png')
+    $updatePreview.Close()
     if ($window.Height -gt [Windows.SystemParameters]::WorkArea.Height - 32) { throw 'Long verse exceeded available screen height.' }
     Hide-Verse
     $timer.Stop()

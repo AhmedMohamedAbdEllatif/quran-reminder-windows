@@ -98,7 +98,8 @@ struct UpdateNoticeView: View {
     private func show(_ release: AvailableUpdate) {
         dismissNotice()
         let frame = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
-        let panel = NSPanel(contentRect: NSRect(x: frame.maxX - 450, y: frame.minY + 24, width: min(420, frame.width - 36), height: 204), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let width = min(420, frame.width - 36)
+        let panel = NSPanel(contentRect: NSRect(x: frame.maxX - width - 18, y: frame.minY + 24, width: width, height: 204), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.isOpaque = false
         panel.backgroundColor = .clear
