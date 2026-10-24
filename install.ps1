@@ -67,4 +67,3 @@ try {
     [Windows.MessageBox]::Show($_.Exception.Message, 'تعذر تثبيت تذكير القرآن') | Out-Null
     exit 1
 }
-

@@ -387,7 +387,7 @@ if ($Check) {
     Save-Memorization $finalMemo
     Show-Memorization
     Confirm-Memorization
-    if ($script:memorization.enabled -or $script:memorization.part_index -ne 4) { throw 'Completed page did not stop the memorization plan.' }
+    if ($script:memorization.enabled -or $script:memorization.part_index -ne 4 -or $script:memorizationTimer.IsEnabled) { throw 'Completed page did not stop the memorization plan and its timer.' }
     $memoSettingsCheck = New-MemorizationSettingsWindow
     $memoSettingsCheck.FindName('Surah').Items.Add([pscustomobject]@{Label='مريم';Number=19}) | Out-Null
     $memoSettingsCheck.FindName('Surah').SelectedIndex = 0
