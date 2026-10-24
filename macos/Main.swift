@@ -18,6 +18,7 @@ struct Preferences: Codable {
     var readCount = 0
     var count = 1
     var translation = true
+    var nextReadingDue: Date?
     var interval = 300
     var fontSize = 32.0
     var customBackground = false
@@ -286,7 +287,7 @@ struct SettingsView: View {
         menu.addItem(withTitle: "إغلاق البرنامج", action: #selector(quit), keyEquivalent: "q")
         for item in menu.items { item.target = self }
         status.menu = menu
-        showReminder()
+        showDueReading()
         if CommandLine.arguments.contains("--ui-check") {
             do { try checkSurahSelectorInteraction(store.chapters) }
             catch { fputs("Integrated selector interaction failed: \(error)\n", stderr); exit(1) }
@@ -309,6 +310,13 @@ struct SettingsView: View {
         }
     }
     @objc func showReminder() {
+        if store.preferences.nextReadingDue != nil {
+            do {
+                var next = store.preferences
+                next.nextReadingDue = nil
+                try store.save(next)
+            } catch { store.error = error.localizedDescription; return }
+        }
         timer?.invalidate()
         if let screen = NSScreen.main {
             let available = screen.visibleFrame
@@ -318,12 +326,25 @@ struct SettingsView: View {
         window.orderFrontRegardless()
     }
     func hideReminder() {
+        do {
+            var next = store.preferences
+            next.nextReadingDue = Date().addingTimeInterval(TimeInterval(next.interval))
+            try store.save(next)
+        } catch { store.error = error.localizedDescription; return }
         window.orderOut(nil)
         timer?.invalidate()
         guard store.preferences.index < store.verses.count else { return }
-        timer = Timer.scheduledTimer(withTimeInterval: TimeInterval(store.preferences.interval), repeats: false) { [weak self] _ in
-            Task { @MainActor in self?.showReminder() }
+        scheduleReading()
+    }
+    func scheduleReading() {
+        let remaining = store.preferences.nextReadingDue?.timeIntervalSinceNow ?? 0
+        timer = Timer.scheduledTimer(withTimeInterval: max(1, min(30, remaining)), repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.showDueReading() }
         }
+    }
+    func showDueReading() {
+        if let deadline = store.preferences.nextReadingDue, deadline > Date() { scheduleReading() }
+        else { showReminder() }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hideReminder(); return false }
     func showDueMemorization() {
@@ -385,6 +406,11 @@ if CommandLine.arguments.contains("--check") {
         plan = memorization.plan; plan.part = 3; plan.completedRepeats = 1
         try memorization.save(plan); try memorization.confirm()
         try require(!memorization.plan.enabled && memorization.plan.part == 4, "Completed memorization plan must stop")
+        var scheduledReading = store.preferences
+        scheduledReading.nextReadingDue = Date().addingTimeInterval(600)
+        try store.save(scheduledReading)
+        let reloadedReading = try ReadingStore(folder: store.folder)
+        try require(abs((reloadedReading.preferences.nextReadingDue ?? .distantPast).timeIntervalSince(scheduledReading.nextReadingDue!)) < 0.01, "Reading deadline must survive restart")
         let restoredPlan = try MemorizationStore(folder: temporary)
         try require(restoredPlan.plan.part == 4, "Memorization progress must persist")
         print("macOS checks passed: full data, surah search, grouped reading, final batch and persistence.")

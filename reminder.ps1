@@ -7,6 +7,13 @@ if ($Check) { $store = Join-Path ([IO.Path]::GetTempPath()) ('QuranReminder-Chec
 [IO.Directory]::CreateDirectory($store) | Out-Null
 $statePath = Join-Path $store 'progress.json'
 $preferencesPath = Join-Path $store 'preferences.json'
+$readingSchedulePath = Join-Path $store 'reading-schedule.json'
+$script:readingDueUnix = 0
+if (Test-Path $readingSchedulePath) {
+    $savedSchedule = Get-Content $readingSchedulePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($savedSchedule.next_due_unix -lt 0) { throw 'Invalid reading schedule.' }
+    $script:readingDueUnix = [long]$savedSchedule.next_due_unix
+}
 $script:versesPerReminder = 1
 $script:showTranslation = $true
 if (Test-Path $preferencesPath) {
@@ -108,11 +115,28 @@ $timer = [Windows.Threading.DispatcherTimer]::new()
 $timer.Interval = [TimeSpan]::FromSeconds($script:readingIntervalSeconds)
 $expiry = [Windows.Threading.DispatcherTimer]::new()
 $expiry.Interval = [TimeSpan]::FromSeconds([Math]::Max(1, [int]$config.auto_hide_seconds))
+function Save-ReadingDeadline($deadline) {
+    $pendingPath = $readingSchedulePath + '.tmp'
+    [IO.File]::WriteAllText($pendingPath, (@{next_due_unix = $deadline} | ConvertTo-Json), [Text.Encoding]::UTF8)
+    if (Test-Path $readingSchedulePath) { [IO.File]::Replace($pendingPath, $readingSchedulePath, $readingSchedulePath + '.bak') }
+    else { [IO.File]::Move($pendingPath, $readingSchedulePath) }
+    $script:readingDueUnix = $deadline
+}
+function Update-ReadingTimer {
+    $remaining = $script:readingDueUnix - [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $timer.Interval = [TimeSpan]::FromSeconds([Math]::Max(1, [Math]::Min(30, $remaining)))
+    $timer.Start()
+}
+function Show-DueReading {
+    if ($script:readingDueUnix -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) { Show-Verse }
+    else { Update-ReadingTimer }
+}
 function Hide-Verse {
     $expiry.Stop()
+    Save-ReadingDeadline ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + $script:readingIntervalSeconds)
     $window.Hide()
     $timer.Stop()
-    $timer.Start()
+    Update-ReadingTimer
 }
 function Add-VersePanel($verse) {
     [xml]$verseLayout = @'
@@ -151,6 +175,7 @@ function Resize-Reminder {
 function Show-Verse {
     if ($script:memorizationSettingsOpen) { $script:readingPending = $true; return }
     $script:readingPending = $false
+    if ($script:readingDueUnix -ne 0) { Save-ReadingDeadline 0 }
     $timer.Stop()
     $expiry.Stop()
     $window.FindName('AdditionalVerses').Children.Clear()
@@ -207,7 +232,7 @@ $window.FindName('Tafsir').Add_Click({ Show-Tafsir })
 $window.FindName('Settings').Add_Click({ Show-Settings })
 $readButton.Add_Click({ Confirm-Reading })
 $window.FindName('Hide').Add_Click({ Hide-Verse })
-$timer.Add_Tick({ Show-Verse })
+$timer.Add_Tick({ Show-DueReading })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {
@@ -300,6 +325,15 @@ if ($Check) {
     Set-StartingVerse 0
     Hide-Verse
     $timer.Stop()
+    $scheduledReading = Get-Content $readingSchedulePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $script:readingDueUnix = [long]$scheduledReading.next_due_unix
+    Show-DueReading
+    if ($window.IsVisible) { throw 'Restart would display reading before its saved deadline.' }
+    Save-ReadingDeadline ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - 1)
+    Show-DueReading
+    if (-not $window.IsVisible) { throw 'Overdue reading was not displayed after resume.' }
+    Hide-Verse
+    $timer.Stop()
     $readingCountBeforeMemo = $script:readCount
     $testPlan = [pscustomobject]@{enabled=$true;page=3;lines_per_part=4;repeat_count=2;interval_seconds=17;part_index=0;confirmed_repeats=0;next_due_unix=0}
     $testPlan.enabled = $false
@@ -381,7 +415,7 @@ $settingsMenu.Add_Click({ Show-Settings })
 $memorizationMenu.Add_Click({ Show-MemorizationSettings })
 $tray.Add_DoubleClick({ Show-Verse })
 $exitMenu.Add_Click({ $dispatcher.InvokeShutdown() })
-try { Start-MemorizationTimer; Show-Verse; [Windows.Threading.Dispatcher]::Run() }
+try { Start-MemorizationTimer; Show-DueReading; [Windows.Threading.Dispatcher]::Run() }
 catch {
     $_ | Out-String | Set-Content (Join-Path $store 'error.log') -Encoding UTF8
     [Windows.MessageBox]::Show($_.Exception.Message, 'Quran Reminder') | Out-Null
