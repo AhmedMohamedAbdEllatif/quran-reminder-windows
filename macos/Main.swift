@@ -364,7 +364,7 @@ struct SettingsView: View {
     func scheduleMemorization() {
         memorizationTimer?.invalidate()
         guard memorization.plan.enabled else { return }
-        let remaining = memorizationWindow.isVisible ? 30 : memorization.plan.nextDue.timeIntervalSinceNow
+        let remaining = (memorizationWindow.isVisible || window.attachedSheet != nil) ? 30 : memorization.plan.nextDue.timeIntervalSinceNow
         memorizationTimer = Timer.scheduledTimer(withTimeInterval: max(1, min(30, remaining)), repeats: false) { [weak self] _ in
             Task { @MainActor in
                 self?.showDueMemorization()
@@ -373,7 +373,7 @@ struct SettingsView: View {
         }
     }
     func showDueMemorization() {
-        guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
+        guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), window.attachedSheet == nil, !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
         if let screen = NSScreen.main { memorizationWindow.setContentSize(NSSize(width: min(940, screen.visibleFrame.width - 40), height: min(620, screen.visibleFrame.height - 80))) }
         memorizationWindow.center()
         memorizationWindow.orderFrontRegardless()
