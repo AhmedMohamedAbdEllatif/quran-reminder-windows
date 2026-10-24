@@ -89,13 +89,13 @@ function Show-Memorization {
     $linePanel.Children.Clear()
     foreach ($line in $part.lines) {
         $label = [Windows.Controls.TextBlock]::new()
-        $label.Text = $line.text
         $label.FontFamily = [Windows.Media.FontFamily]::new('Traditional Arabic')
         $label.FontSize = $fontSize
         $label.TextAlignment = [Windows.TextAlignment]::Center
         $label.TextWrapping = [Windows.TextWrapping]::Wrap
         $label.Margin = [Windows.Thickness]::new(0, 8, 0, 8)
         $linePanel.Children.Add($label) | Out-Null
+        Set-MushafLine $label $line.text
     }
     $script:memorizationWindow.Show()
 }

@@ -93,7 +93,7 @@ struct MemorizationSessionView: View {
             Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").foregroundStyle(ReminderPalette.secondary)
             ScrollView {
                 VStack(spacing: 16) {
-                    ForEach(store.currentLines) { line in Text(line.text).font(.custom("Geeza Pro", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
+                    ForEach(store.currentLines) { line in mushafLineText(line.text, size: appearance.preferences.fontSize).accessibilityLabel(line.text).font(.custom("Geeza Pro", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
                 }
             }
             Text("قد يبدأ المقطع أو ينتهي داخل آية. التكرار مستقل عن تقدم القراءة.").font(.caption).foregroundStyle(ReminderPalette.secondary)

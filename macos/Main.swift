@@ -47,6 +47,7 @@ func searchText(_ text: String) -> String {
         return backgroundImage
     }
     init(folder: URL? = nil) throws {
+        try QuranMarkers.load()
         guard let resource = Bundle.main.url(forResource: "verses", withExtension: "json") else {
             throw NSError(domain: "QuranReminder", code: 1, userInfo: [NSLocalizedDescriptionKey: "ملف الآيات غير موجود"])
         }
@@ -107,7 +108,8 @@ struct ReadingView: View {
                         if store.displayed.isEmpty { Text("وصلت إلى نهاية المصحف").font(.title) }
                         ForEach(store.displayed) { verse in
                             VStack(spacing: 14) {
-                                Text(verse.arabic).font(.custom("Geeza Pro", size: store.preferences.fontSize))
+                                readingVerseText(verse, size: store.preferences.fontSize).font(.custom("Geeza Pro", size: store.preferences.fontSize))
+                                    .accessibilityLabel(verse.arabic + "، الآية " + arabicVerseNumber(verse.ayah))
                                 if store.preferences.translation {
                                     Text(verse.english).font(.system(size: 19)).environment(\.layoutDirection, .leftToRight)
                                 }
@@ -469,6 +471,19 @@ if CommandLine.arguments.contains("--check") {
         try require(restored.preferences.index == 6236, "Reading position must survive reopening")
         try require(store.verses.allSatisfy { !$0.english.isEmpty && !$0.tafsir.isEmpty }, "Every verse needs translation and tafsir")
         let memorization = try MemorizationStore(folder: temporary)
+        var endMarkers = 0
+        for line in memorization.pages.flatMap({ $0.lines }) {
+            let segments = mushafSegments(line.text)
+            try require(segments.map(\.sourceText).joined() == line.text, "Verse ornament changed source text")
+            for segment in segments { if case .endNumber = segment { endMarkers += 1 } }
+        }
+        try require(endMarkers == 6236, "Every ayah must retain its end number")
+        for (number, digits) in [(1, "١"), (9, "٩"), (10, "١٠"), (99, "٩٩"), (100, "١٠٠"), (286, "٢٨٦")] {
+            try require(arabicVerseNumber(number) == digits, "Arabic verse digits are incorrect")
+            for size in [18.0, 64.0] {
+                try require(QuranMarkers.image(digits, size: size).tiffRepresentation != nil, "Verse ornament failed to render")
+            }
+        }
         var plan = memorization.plan
         plan.page = 3; plan.linesPerPart = 4; plan.repeats = 2; plan.interval = 17; plan.enabled = true
         try memorization.save(plan)

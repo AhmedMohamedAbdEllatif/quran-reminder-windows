@@ -2,7 +2,7 @@
     $targetWindow.Show()
     $targetWindow.UpdateLayout()
     $bitmap = [Windows.Media.Imaging.RenderTargetBitmap]::new([int]$targetWindow.Content.ActualWidth, [int]$targetWindow.Content.ActualHeight, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
-    $bitmap.Render($targetWindow.Content)
+    $bitmap.Render($targetWindow)
     $encoder = [Windows.Media.Imaging.PngBitmapEncoder]::new()
     $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))
     $stream = [IO.File]::Create($destination)

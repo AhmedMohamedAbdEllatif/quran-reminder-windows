@@ -2,7 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework
 $installFolder = Join-Path $env:LOCALAPPDATA 'QuranReminder\App'
-$requiredFiles = @('reminder.ps1', 'updates.ps1', 'version.txt', 'settings.ps1', 'tafsir.ps1', 'memorization.ps1', 'mushaf-lines.json', 'tanzil-uthmani-1.1.txt', 'THIRD_PARTY_NOTICES.md', 'ui.ps1', 'ui.xaml', 'config.json', 'verses.json', 'background.png', 'Start.vbs', 'README.txt')
+$requiredFiles = @('reminder.ps1', 'verse-markers.ps1', 'AmiriQuran.ttf', 'Amiri-OFL.txt', 'updates.ps1', 'version.txt', 'settings.ps1', 'tafsir.ps1', 'memorization.ps1', 'mushaf-lines.json', 'tanzil-uthmani-1.1.txt', 'THIRD_PARTY_NOTICES.md', 'ui.ps1', 'ui.xaml', 'config.json', 'verses.json', 'background.png', 'Start.vbs', 'README.txt')
 function Copy-ApplicationFile($sourcePath, $destinationPath) {
     $pendingPath = $destinationPath + '.' + [Guid]::NewGuid().ToString('N') + '.tmp'
     [IO.File]::Copy($sourcePath, $pendingPath)

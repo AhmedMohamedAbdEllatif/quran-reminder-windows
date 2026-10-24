@@ -2,6 +2,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
 . (Join-Path $PSScriptRoot 'ui.ps1')
+. (Join-Path $PSScriptRoot 'verse-markers.ps1')
 $store = Join-Path $env:LOCALAPPDATA 'QuranReminder'
 if ($Check) { $store = Join-Path ([IO.Path]::GetTempPath()) ('QuranReminder-Check-' + [Guid]::NewGuid().ToString('N')) }
 [IO.Directory]::CreateDirectory($store) | Out-Null
@@ -163,8 +164,8 @@ function Add-VersePanel($verse) {
 </StackPanel>
 '@
     $versePanel = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($verseLayout))
-    $versePanel.Children[1].Text = $verse.arabic
     $versePanel.Children[1].FontSize = $fontSize
+    Set-ReadingVerse $versePanel.Children[1] $verse
     $versePanel.Children[2].Text = $verse.english
     $versePanel.Children[3].Text = 'Quran ' + $verse.surah_number + ':' + $verse.ayah
     $window.FindName('AdditionalVerses').Children.Add($versePanel) | Out-Null
@@ -205,7 +206,7 @@ function Show-Verse {
         $readButton.IsEnabled = $true
         $currentVerse = $verses[$script:currentIndex]
         $reference.Text = $currentVerse.surah_name + ' · الآية ' + $currentVerse.ayah
-        $verseText.Text = $currentVerse.arabic
+        Set-ReadingVerse $verseText $currentVerse
         $translationText.Text = $currentVerse.english
         $verseNumberText.Text = 'Quran ' + $currentVerse.surah_number + ':' + $currentVerse.ayah
         for ($offset = 1; $offset -lt $script:displayedCount; $offset++) {
@@ -252,6 +253,20 @@ $timer.Add_Tick({ Show-DueReading })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {
+    $markerProbe = [Windows.Controls.TextBlock]::new()
+    foreach ($markerFontSize in @(18, 64)) {
+        $markerProbe.FontSize = $markerFontSize
+        foreach ($sample in @('١', '٩', '١٠', '٩٩', '١٠٠', '٢٨٦')) {
+            Set-MushafLine $markerProbe ('بداية ' + $sample + ' نهاية ٢')
+            $reconstructed = -join @($markerProbe.Inlines | ForEach-Object {
+                if ($_ -is [Windows.Documents.Run]) { $_.Text } else { $_.Child.Tag }
+            })
+            if ($reconstructed -cne ('بداية ' + $sample + ' نهاية ٢')) { throw 'Verse ornament changed the source text or number order.' }
+            $seal = @($markerProbe.Inlines)[1].Child
+            $seal.Measure([Windows.Size]::new($markerFontSize, $markerFontSize))
+            if ($seal.Children[1].DesiredSize.Width -gt $markerFontSize -or $seal.Children[1].DesiredSize.Height -gt $markerFontSize) { throw 'Verse number does not fit inside its ornament.' }
+        }
+    }
     Show-SaveConfirmation 'خطة الحفظ اشتغلت' ('أول تذكير بعد ' + (Get-IntervalLabel 600) + '.')
     if ($script:saveConfirmation.FindName('ConfirmationMessage').Text -ne 'أول تذكير بعد 10 دقيقة.') { throw 'Save confirmation did not explain the reminder time.' }
     $script:saveConfirmation.Close()
@@ -267,7 +282,8 @@ if ($Check) {
     $savedCount = [int](Get-Content $statePath -Raw -Encoding UTF8 | ConvertFrom-Json).read_count
     if ($savedCount -ne $script:readCount) { throw 'Reading progress was not saved.' }
     Show-Verse
-    if ($verseText.Text -ne $verses[$script:currentIndex].arabic) { throw 'Next verse text mismatch.' }
+    if ($verseText.Inlines.FirstInline.Text -ne $verses[$script:currentIndex].arabic) { throw 'Next verse text mismatch.' }
+    if ($verseText.Inlines.LastInline.Child.Tag -ne (Get-ArabicVerseNumber ([int]$verses[$script:currentIndex].ayah))) { throw 'Reading verse ornament has the wrong number.' }
     if ($translationText.Text -ne $verses[$script:currentIndex].english) { throw 'Translation mismatch.' }
     $expectedReference = 'Quran ' + $verses[$script:currentIndex].surah_number + ':' + $verses[$script:currentIndex].ayah
     if ($verseNumberText.Text -ne $expectedReference) { throw 'Verse reference mismatch.' }
