@@ -290,20 +290,25 @@ struct SettingsView: View {
         if CommandLine.arguments.contains("--ui-check") {
             do { try checkSurahSelectorInteraction(store.chapters) }
             catch { fputs("Integrated selector interaction failed: \(error)\n", stderr); exit(1) }
+            do {
+                var scheduledPlan = memorization.plan
+                scheduledPlan.enabled = true
+                scheduledPlan.nextDue = Date().addingTimeInterval(1)
+                try memorization.save(scheduledPlan)
+            } catch { fputs("Memorization schedule setup failed: \(error)\n", stderr); exit(1) }
             confirmation.show()
             DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
                 guard let self, self.window.isVisible, !self.confirmation.isVisible else { fputs("macOS UI launch or toast dismissal failed\n", stderr); exit(1) }
-                print("macOS UI check passed: native reading window launched and confirmation dismissed automatically.")
+                guard self.memorizationWindow.isVisible else { fputs("Due memorization was blocked by reading\n", stderr); exit(1) }
+                self.window.orderOut(nil)
+                self.showReminder()
+                guard self.window.isVisible, self.memorizationWindow.isVisible else { fputs("Reading was blocked by memorization\n", stderr); exit(1) }
+                print("macOS UI check passed: independent reading and memorization windows; confirmation dismissed automatically.")
                 NSApplication.shared.terminate(nil)
             }
         }
     }
     @objc func showReminder() {
-        if memorizationWindow.isVisible {
-            timer?.invalidate()
-            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: false) { [weak self] _ in Task { @MainActor in self?.showReminder() } }
-            return
-        }
         timer?.invalidate()
         if let screen = NSScreen.main {
             let available = screen.visibleFrame
@@ -322,7 +327,7 @@ struct SettingsView: View {
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hideReminder(); return false }
     func showDueMemorization() {
-        guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), !window.isVisible, !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
+        guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
         if let screen = NSScreen.main { memorizationWindow.setContentSize(NSSize(width: min(940, screen.visibleFrame.width - 40), height: min(620, screen.visibleFrame.height - 80))) }
         memorizationWindow.center()
         memorizationWindow.orderFrontRegardless()

@@ -117,7 +117,9 @@ struct MemorizationSettingsView: View {
     init(store: MemorizationStore, chapters: [Verse], saved: @escaping () -> Void) {
         self.store = store; self.chapters = chapters
         self.saved = saved
-        _draft = State(initialValue: store.plan)
+        var initialPlan = store.plan
+        initialPlan.enabled = true
+        _draft = State(initialValue: initialPlan)
         let firstKey = store.pages[store.plan.page - 1].lines.first?.references.first ?? "1:1"
         _chapter = State(initialValue: Int(firstKey.split(separator: ":")[0]) ?? 1)
         _intervalText = State(initialValue: String(store.plan.interval))
@@ -139,7 +141,7 @@ struct MemorizationSettingsView: View {
                 Text("الجزء الحالي: \(store.plan.part + 1) · المراجعات المكتملة: \(store.plan.completedRepeats)").font(.caption)
             }.formStyle(.grouped)
             if let failure { Text(failure).foregroundStyle(.red) }
-            HStack { Button("حفظ الخطة", action: apply).buttonStyle(.borderedProminent); Button("إلغاء") { dismiss() } }.controlSize(.large)
+            HStack { Button(draft.enabled ? "حفظ وتشغيل الخطة" : "حفظ الخطة بدون تشغيل", action: apply).buttonStyle(.borderedProminent); Button("إلغاء") { dismiss() } }.controlSize(.large)
         }.padding(24).environment(\.layoutDirection, .rightToLeft)
     }
     func apply() {

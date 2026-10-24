@@ -152,7 +152,12 @@ function Initialize-MemorizationTab($hostWindow) {
         $planWindow.FindName('Repeats').Text = $script:memorization.repeat_count
         $planWindow.FindName('Interval').Text = $script:memorization.interval_seconds
         $planWindow.FindName('Unit').SelectedIndex = 0
-        $planWindow.FindName('Enabled').IsChecked = $script:memorization.enabled
+        $planWindow.FindName('Enabled').IsChecked = $true
+        $planWindow.FindName('Save').Content = 'حفظ وتشغيل الخطة'
+        $planWindow.FindName('Enabled').Add_Click({
+            if ($planWindow.FindName('Enabled').IsChecked) { $planWindow.FindName('Save').Content = 'حفظ وتشغيل الخطة' }
+            else { $planWindow.FindName('Save').Content = 'حفظ الخطة بدون تشغيل' }
+        })
         $planWindow.FindName('Progress').Text = 'الموضع الحالي: الجزء ' + ($script:memorization.part_index + 1) + ' · المراجعات المكتملة فيه: ' + $script:memorization.confirmed_repeats
         $planWindow.FindName('Cancel').Visibility = [Windows.Visibility]::Collapsed
         $planWindow.FindName('Save').Add_Click({
@@ -180,12 +185,16 @@ function Initialize-MemorizationTab($hostWindow) {
         return $planWindow
     } finally { $script:memorizationSettingsOpen = $false; if ($script:readingPending) { Show-Verse } }
 }
+function Show-DueMemorization {
+    if (-not $script:memorization.enabled -or $script:memorizationSettingsOpen) { return }
+    if ($script:memorizationWindow -and $script:memorizationWindow.IsVisible) { return }
+    if ([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() -lt $script:memorization.next_due_unix) { return }
+    Show-Memorization
+}
 function Start-MemorizationTimer {
     $script:memorizationTimer = [Windows.Threading.DispatcherTimer]::new()
     $script:memorizationTimer.Interval = [TimeSpan]::FromSeconds(1)
-    $script:memorizationTimer.Add_Tick({
-        if ($script:memorization.enabled -and -not $script:memorizationSettingsOpen -and -not $window.IsVisible -and (-not $script:memorizationWindow -or -not $script:memorizationWindow.IsVisible) -and [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() -ge $script:memorization.next_due_unix) { Show-Memorization }
-    })
+    $script:memorizationTimer.Add_Tick({ Show-DueMemorization })
     $script:memorizationTimer.Start()
 }
 Assert-MemorizationPlan $script:memorization

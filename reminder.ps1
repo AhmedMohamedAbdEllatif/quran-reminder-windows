@@ -149,7 +149,7 @@ function Resize-Reminder {
     $window.FindName('VerseScroll').InvalidateMeasure()
 }
 function Show-Verse {
-    if (($script:memorizationWindow -and $script:memorizationWindow.IsVisible) -or $script:memorizationSettingsOpen) { $script:readingPending = $true; return }
+    if ($script:memorizationSettingsOpen) { $script:readingPending = $true; return }
     $script:readingPending = $false
     $timer.Stop()
     $expiry.Stop()
@@ -305,8 +305,33 @@ if ($Check) {
     Save-Memorization $testPlan
     $memoParts = @(Get-MemorizationParts $script:memorization)
     if ($memoParts.Count -ne 4 -or $memoParts[3].lines.Count -ne 3) { throw 'Page was not divided into 4+4+4+3 actual lines.' }
-    Show-Memorization
+    Show-Verse
+    $scheduledPlan = Get-MemorizationCopy
+    $scheduledPlan.next_due_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 60
+    Save-Memorization $scheduledPlan
+    Show-DueMemorization
+    if ($script:memorizationWindow -and $script:memorizationWindow.IsVisible) { throw 'Memorization appeared before its scheduled time.' }
+    $scheduledPlan.next_due_unix = 0
+    Save-Memorization $scheduledPlan
+    $script:memorizationSettingsOpen = $true
+    Show-DueMemorization
+    if ($script:memorizationWindow -and $script:memorizationWindow.IsVisible) { throw 'Memorization interrupted settings.' }
+    $script:memorizationSettingsOpen = $false
+    Start-MemorizationTimer
+    $scheduleFrame = [Windows.Threading.DispatcherFrame]::new()
+    $scheduleTimeout = [Windows.Threading.DispatcherTimer]::new()
+    $scheduleTimeout.Interval = [TimeSpan]::FromMilliseconds(1500)
+    $scheduleTimeout.Add_Tick({ $scheduleTimeout.Stop(); $scheduleFrame.Continue = $false })
+    $scheduleTimeout.Start()
+    [Windows.Threading.Dispatcher]::PushFrame($scheduleFrame)
+    $script:memorizationTimer.Stop()
+    if (-not $script:memorizationWindow.IsVisible -or -not $window.IsVisible) { throw 'Due memorization was blocked by reading.' }
+    Hide-Verse
+    Show-Verse
+    if (-not $window.IsVisible -or -not $script:memorizationWindow.IsVisible) { throw 'Reading was blocked by memorization.' }
     Hide-Memorization
+    Hide-Verse
+    $timer.Stop()
     if ($script:memorization.confirmed_repeats -ne 0) { throw 'Hiding a memorization part counted a review.' }
     Show-Memorization
     Confirm-Memorization
