@@ -14,3 +14,8 @@ jobs:
         run: |
           powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\reminder.ps1 -Check
           if ($LASTEXITCODE -ne 0) { throw 'Reminder checks failed.' }
+      - name: Verify installation and update preservation
+        shell: powershell
+        run: |
+          powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\install.ps1 -Check
+          if ($LASTEXITCODE -ne 0) { throw 'Installer checks failed.' }
