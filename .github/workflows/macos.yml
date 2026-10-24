@@ -1,7 +1,7 @@
 name: macOS build
 on:
   push:
-    paths: ['macos/**', '.github/workflows/macos.yml', 'verses.json', 'mushaf-lines.json', 'background.png']
+    paths: ['macos/**', '.github/workflows/macos.yml', 'verses.json', 'mushaf-lines.json', 'background.png', 'version.txt']
   workflow_dispatch:
 permissions:
   contents: read

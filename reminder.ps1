@@ -228,6 +228,7 @@ function Confirm-Reading {
 . (Join-Path $PSScriptRoot 'settings.ps1')
 . (Join-Path $PSScriptRoot 'tafsir.ps1')
 . (Join-Path $PSScriptRoot 'memorization.ps1')
+. (Join-Path $PSScriptRoot 'updates.ps1')
 $window.FindName('Tafsir').Add_Click({ Show-Tafsir })
 $window.FindName('Settings').Add_Click({ Show-Settings })
 $readButton.Add_Click({ Confirm-Reading })
@@ -400,6 +401,39 @@ if ($Check) {
         . (Join-Path $PSScriptRoot 'tests/appearance.ps1')
         Test-ReminderAppearance $PreviewDirectory
     }
+    foreach ($case in @(
+        @{ Tag='v1.10.0'; Draft=$false; Preview=$false; Expected=$true },
+        @{ Tag='v1.9.0'; Draft=$false; Preview=$false; Expected=$false },
+        @{ Tag='v1.8.9'; Draft=$false; Preview=$false; Expected=$false },
+        @{ Tag='v1.10.0'; Draft=$true; Preview=$false; Expected=$false },
+        @{ Tag='v1.10.0'; Draft='false'; Preview=$false; Expected=$false },
+        @{ Tag='v1.10.0'; Draft=$false; Preview=$true; Expected=$false },
+        @{ Tag='v2.0.0-beta'; Draft=$false; Preview=$false; Expected=$false }
+    )) {
+        $releaseCase = [pscustomobject]@{tag_name=$case.Tag;draft=$case.Draft;prerelease=$case.Preview;html_url=('https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/' + $case.Tag)}
+        if ([bool](Get-AvailableUpdate $releaseCase ([version]'1.9.0')) -ne $case.Expected) { throw ('Incorrect update selection: ' + $case.Tag) }
+    }
+    $futureRelease = [pscustomobject]@{tag_name='v9.0.0';draft=$false;prerelease=$false;html_url='https://example.com/not-our-release'}
+    if (Get-AvailableUpdate $futureRelease $script:installedVersion) { throw 'An external update URL was accepted.' }
+    $futureRelease.html_url = 'https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/v9.0.0'
+    Start-UpdateChecks
+    $script:updateCheckTimer.Stop()
+    $httpFixture = [Threading.Tasks.TaskCompletionSource[string]]::new()
+    $httpFixture.SetResult(($futureRelease | ConvertTo-Json))
+    $script:updateTask = $httpFixture.Task
+    Complete-UpdateCheck
+    if (-not $script:updateNotice.IsVisible -or $script:updateNotice.FindName('DownloadUpdate').Tag -ne $futureRelease.html_url) { throw 'New release notice or download link was missing.' }
+    $script:updateNotice.Close()
+    $script:updateTask = $httpFixture.Task
+    Complete-UpdateCheck
+    if ($script:updateNotice.IsVisible) { throw 'The same update was notified twice.' }
+    if ((Get-Content $script:updateStatePath -Raw | ConvertFrom-Json).notified_tag -ne 'v9.0.0') { throw 'Update notification state did not persist.' }
+    $offlineFixture = [Threading.Tasks.TaskCompletionSource[string]]::new()
+    $offlineFixture.SetException([Net.Http.HttpRequestException]::new('Offline test'))
+    $script:updateTask = $offlineFixture.Task
+    Complete-UpdateCheck
+    if ($script:updateTask -or $script:updateState.next_check_unix -le [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()) { throw 'Offline check did not finish and schedule a retry.' }
+    Stop-UpdateChecks
     'WPF loaded; 6236 verses loaded; show, confirm, save and hide passed.'
     exit
 }
@@ -413,6 +447,8 @@ $menu = [Windows.Forms.ContextMenuStrip]::new()
 $showMenu = $menu.Items.Add('عرض الآية')
 $settingsMenu = $menu.Items.Add('الإعدادات')
 $memorizationMenu = $menu.Items.Add('خطة الحفظ والمراجعة')
+$downloadMenu = $menu.Items.Add('تحميل آخر إصدار')
+$downloadMenu.Add_Click({ Start-Process -FilePath 'https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/latest' })
 $exitMenu = $menu.Items.Add('إغلاق البرنامج')
 $tray.ContextMenuStrip = $menu
 $tray.Visible = $true
@@ -422,9 +458,9 @@ $settingsMenu.Add_Click({ Show-Settings })
 $memorizationMenu.Add_Click({ Show-MemorizationSettings })
 $tray.Add_DoubleClick({ Show-Verse })
 $exitMenu.Add_Click({ $dispatcher.InvokeShutdown() })
-try { Start-MemorizationTimer; Show-DueReading; [Windows.Threading.Dispatcher]::Run() }
+try { Start-MemorizationTimer; Start-UpdateChecks; Show-DueReading; [Windows.Threading.Dispatcher]::Run() }
 catch {
     $_ | Out-String | Set-Content (Join-Path $store 'error.log') -Encoding UTF8
     [Windows.MessageBox]::Show($_.Exception.Message, 'Quran Reminder') | Out-Null
 }
-finally { $timer.Stop(); $expiry.Stop(); $tray.Dispose(); $mutex.ReleaseMutex(); $mutex.Dispose() }
+finally { Stop-UpdateChecks; $timer.Stop(); $expiry.Stop(); $tray.Dispose(); $mutex.ReleaseMutex(); $mutex.Dispose() }

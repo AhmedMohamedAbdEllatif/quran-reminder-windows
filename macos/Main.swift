@@ -268,6 +268,7 @@ struct SettingsView: View {
     private var memorizationWindow: NSWindow!
     private var memorizationTimer: Timer?
     private let confirmation = SaveConfirmationController()
+    private var updates: UpdateChecker!
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
             let checkFolder = CommandLine.arguments.contains("--ui-check") ? FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString) : nil
@@ -275,6 +276,8 @@ struct SettingsView: View {
             memorization = try MemorizationStore(folder: store.folder)
         }
         catch { showFatal(error); return }
+        let updateDefaults = CommandLine.arguments.contains("--ui-check") ? UserDefaults(suiteName: "QuranReminder-UpdateCheck-" + UUID().uuidString)! : .standard
+        updates = UpdateChecker(defaults: updateDefaults)
         store.showSaveConfirmation = { [weak self] title, message in self?.confirmation.show(title: title, message: message) }
         window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
         window.minSize = NSSize(width: 440, height: 360)
@@ -297,12 +300,21 @@ struct SettingsView: View {
         status.button?.toolTip = "تذكير القرآن"
         let menu = NSMenu()
         menu.addItem(withTitle: "عرض الآيات", action: #selector(showReminder), keyEquivalent: "")
+        menu.addItem(withTitle: "تحميل آخر إصدار", action: #selector(openLatestRelease), keyEquivalent: "")
         menu.addItem(NSMenuItem.separator())
         menu.addItem(withTitle: "إغلاق البرنامج", action: #selector(quit), keyEquivalent: "q")
         for item in menu.items { item.target = self }
         status.menu = menu
         showDueReading()
+        if !CommandLine.arguments.contains("--ui-check") { updates.start() }
         if CommandLine.arguments.contains("--ui-check") {
+            let futureUpdate = GitHubRelease(tag_name: "v9.0.0", html_url: "https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/v9.0.0", draft: false, prerelease: false)
+            updates.accept(futureUpdate)
+            guard updates.isNoticeVisible else { fputs("Update notice failed to open\n", stderr); exit(1) }
+            updates.dismissNotice()
+            updates.accept(futureUpdate)
+            guard !updates.isNoticeVisible else { fputs("Update notice was repeated\n", stderr); exit(1) }
+            updates.retryLater("Offline test")
             do { try checkSurahSelectorInteraction(store.chapters) }
             catch { fputs("Integrated selector interaction failed: \(error)\n", stderr); exit(1) }
             do {
@@ -387,6 +399,9 @@ struct SettingsView: View {
         memorizationWindow.center()
         memorizationWindow.orderFrontRegardless()
     }
+    @objc func openLatestRelease() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/latest")!)
+    }
     @objc func quit() { NSApplication.shared.terminate(nil) }
     func showFatal(_ error: Error) {
         let alert = NSAlert()
@@ -407,6 +422,16 @@ if CommandLine.arguments.contains("--check") {
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = try ReadingStore(folder: temporary)
         try require(store.chapters.count == 114, "Expected all 114 surahs")
+        for (tag, draft, preview, expected) in [
+            ("v1.10.0", false, false, true), ("v1.9.0", false, false, false),
+            ("v1.8.9", false, false, false), ("v1.10.0", true, false, false),
+            ("v1.10.0", false, true, false), ("v2.0.0-beta", false, false, false)
+        ] {
+            let release = GitHubRelease(tag_name: tag, html_url: "https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/\(tag)", draft: draft, prerelease: preview)
+            try require((availableUpdate(release, currentVersion: "1.9.0") != nil) == expected, "Incorrect update selection: \(tag)")
+        }
+        let externalRelease = GitHubRelease(tag_name: "v9.0.0", html_url: "https://example.com/not-our-release", draft: false, prerelease: false)
+        try require(availableUpdate(externalRelease, currentVersion: "1.6.0") == nil, "External update URL was accepted")
         try require(matchingSurahs(store.chapters, query: "مريم").map(\.surah_number) == [19], "Integrated name filtering failed")
         try require(matchingSurahs(store.chapters, query: "19").map(\.surah_number) == [19], "Integrated number filtering failed")
         try require(matchingSurahs(store.chapters, query: "غيرموجود").isEmpty, "Unknown surah must have no matches")
