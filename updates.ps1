@@ -9,15 +9,17 @@ if (Test-Path $script:updateStatePath) {
         $savedUpdateState = Get-Content $script:updateStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
         $savedDeadline = 0L
         if ([long]::TryParse([string]$savedUpdateState.next_check_unix, [ref]$savedDeadline) -and $savedDeadline -ge 0) { $script:updateState.next_check_unix = $savedDeadline }
-        if ($savedUpdateState.notified_tag -is [string] -and $savedUpdateState.notified_tag -cmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { $script:updateState.notified_tag = $savedUpdateState.notified_tag }
+        if ($savedUpdateState.notified_tag -is [string] -and $savedUpdateState.notified_tag -cmatch '^v[0-9]+\.[0-9]+\.[0-9]+\z') { $script:updateState.notified_tag = $savedUpdateState.notified_tag }
     }
     catch [ArgumentException] { Write-Warning 'Invalid update state; the next check will retry.' }
+    catch [IO.IOException] { Write-Warning 'Update state is unavailable; the next check will retry.' }
+    catch [UnauthorizedAccessException] { Write-Warning 'Update state is not readable; reminders remain active.' }
 }
 function Get-AvailableUpdate($release, $currentVersion) {
     if ($release.draft -isnot [bool] -or $release.prerelease -isnot [bool]) { return $null }
     if ($release.draft -ne $false -or $release.prerelease -ne $false) { return $null }
     if ($release.tag_name -isnot [string]) { return $null }
-    if ($release.tag_name -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { return $null }
+    if ($release.tag_name -cnotmatch '^v[0-9]+\.[0-9]+\.[0-9]+\z') { return $null }
     $candidate = $null
     if (-not [version]::TryParse($release.tag_name.Substring(1), [ref]$candidate) -or $candidate -le $currentVersion) { return $null }
     $url = 'https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/' + $release.tag_name
@@ -85,7 +87,8 @@ function Complete-UpdateCheck {
     $script:updateCompletionTimer.Stop()
     $script:updateState.next_check_unix = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 3600
     if ($script:updateTask.IsFaulted -or $script:updateTask.IsCanceled) {
-        Write-Warning 'Update check unavailable; reading and memorization remain active.'
+        if ($script:updateTask.IsFaulted) { Write-Warning ('Update check unavailable: ' + $script:updateTask.Exception.GetBaseException().GetType().Name) }
+        else { Write-Warning 'Update check cancelled; a later check will retry.' }
         Save-UpdateState
         $script:updateTask = $null
         return

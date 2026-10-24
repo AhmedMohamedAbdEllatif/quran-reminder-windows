@@ -408,7 +408,8 @@ if ($Check) {
         @{ Tag='v1.10.0'; Draft=$true; Preview=$false; Expected=$false },
         @{ Tag='v1.10.0'; Draft='false'; Preview=$false; Expected=$false },
         @{ Tag='v1.10.0'; Draft=$false; Preview=$true; Expected=$false },
-        @{ Tag='v2.0.0-beta'; Draft=$false; Preview=$false; Expected=$false }
+        @{ Tag='v2.0.0-beta'; Draft=$false; Preview=$false; Expected=$false },
+        @{ Tag="v1.10.0`n"; Draft=$false; Preview=$false; Expected=$false }
     )) {
         $releaseCase = [pscustomobject]@{tag_name=$case.Tag;draft=$case.Draft;prerelease=$case.Preview;html_url=('https://github.com/AhmedMohamedAbdEllatif/quran-reminder-windows/releases/tag/' + $case.Tag)}
         if ([bool](Get-AvailableUpdate $releaseCase ([version]'1.9.0')) -ne $case.Expected) { throw ('Incorrect update selection: ' + $case.Tag) }
