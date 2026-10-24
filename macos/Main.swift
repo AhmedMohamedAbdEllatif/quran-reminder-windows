@@ -40,10 +40,10 @@ func searchText(_ text: String) -> String {
     var showSaveConfirmation: ((String, String) -> Void)?
     var displayed: [Verse] { Array(verses.dropFirst(preferences.index).prefix(preferences.count)) }
     var background: NSImage? {
+        guard preferences.customBackground else { return nil }
         if let backgroundImage { return backgroundImage }
         let custom = folder.appendingPathComponent("background.png")
-        let bundled = Bundle.main.url(forResource: "background", withExtension: "png")
-        backgroundImage = (preferences.customBackground ? custom : bundled).flatMap { NSImage(contentsOf: $0) }
+        backgroundImage = NSImage(contentsOf: custom)
         return backgroundImage
     }
     init(folder: URL? = nil) throws {
@@ -98,11 +98,10 @@ struct ReadingView: View {
     @State private var memorizationSettings = false
     var body: some View {
         ZStack {
-            if let background = store.background { Image(nsImage: background).resizable().scaledToFill() }
-            Color(red: 0.04, green: 0.12, blue: 0.16).opacity(0.72)
+            ReminderSurface(store: store)
             VStack(spacing: 20) {
                 Text("تذكير القرآن").font(.title2.weight(.semibold))
-                Text("الآيات التي أكدت قراءتها: \(store.preferences.readCount)").font(.caption).opacity(0.8)
+                Text("الآيات التي أكدت قراءتها: \(store.preferences.readCount)").font(.caption).foregroundStyle(ReminderPalette.secondary)
                 ScrollView {
                     VStack(spacing: 24) {
                         if store.displayed.isEmpty { Text("وصلت إلى نهاية المصحف").font(.title) }
@@ -113,7 +112,7 @@ struct ReadingView: View {
                                     Text(verse.english).font(.system(size: 19)).environment(\.layoutDirection, .leftToRight)
                                 }
                                 Text("\(verse.surah_name) · الآية \(verse.ayah)").font(.caption)
-                                Divider().overlay(.white.opacity(0.25))
+                                Divider().overlay(ReminderPalette.edge)
                             }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
                         }
                     }.padding(.horizontal, 12)
@@ -121,14 +120,14 @@ struct ReadingView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 10) {
                     Button(store.displayed.count > 1 ? "✓ قرأتها كلها" : "✓ قرأتها") {
                         do { try store.confirm(); hide() } catch { store.error = error.localizedDescription }
-                    }.buttonStyle(.borderedProminent).disabled(store.displayed.isEmpty)
+                    }.buttonStyle(.borderedProminent).foregroundStyle(.white).disabled(store.displayed.isEmpty)
                     Button("التفسير") { tafsir = true }.disabled(store.displayed.isEmpty)
                     Button("الإعدادات") { settings = true }
                     Button("خطة الحفظ") { memorizationSettings = true }
                     Button("إخفاء", action: hide)
                 }.controlSize(.large).buttonStyle(.bordered)
-            }.padding(28).foregroundStyle(.white)
-        }.clipped().tint(Color(red: 0.15, green: 0.36, blue: 0.43))
+            }.padding(28).foregroundStyle(ReminderPalette.ink)
+        }.preferredColorScheme(.light).clipped().tint(Color(red: 0.15, green: 0.36, blue: 0.43))
         .environment(\.layoutDirection, .rightToLeft)
         .sheet(isPresented: $settings) { SettingsView(store: store, memorization: memorization) }
         .sheet(isPresented: $memorizationSettings) { SettingsView(store: store, memorization: memorization, initialTab: 1) }
@@ -196,14 +195,18 @@ struct SettingsView: View {
             Form {
                 if selectedTab == 2 {
                 Section("خلفية الآيات") {
-                    if let image = selectedImage.flatMap({ NSImage(contentsOf: $0) }) ?? store.background {
+                    if let image = selectedImage.flatMap({ NSImage(contentsOf: $0) }) ?? (draft.customBackground ? store.background : nil) {
                         Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().cornerRadius(10)
+                    } else {
+                        Text("الخلفية الافتراضية — أوف وايت دافئ").frame(maxWidth: .infinity).frame(height: 90)
+                            .foregroundStyle(ReminderPalette.ink).background(ReminderPalette.paper).cornerRadius(10)
                     }
+                    Button("استعادة الخلفية الافتراضية") { selectedImage = nil; draft.customBackground = false }
                     Button("اختيار صورة من الجهاز") {
                         let picker = NSOpenPanel()
                         picker.canChooseDirectories = false
                         picker.allowsMultipleSelection = false
-                        if picker.runModal() == .OK { selectedImage = picker.url }
+                        if picker.runModal() == .OK { selectedImage = picker.url; draft.customBackground = true }
                     }
                 }
                 } else {
@@ -292,7 +295,7 @@ struct SettingsView: View {
         memorizationWindow.title = "الحفظ والمراجعة"
         memorizationWindow.level = .floating
         memorizationWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        memorizationWindow.contentView = NSHostingView(rootView: MemorizationSessionView(store: memorization, dismissWindow: { [weak self] in self?.memorizationWindow.orderOut(nil); self?.scheduleMemorization() }))
+        memorizationWindow.contentView = NSHostingView(rootView: MemorizationSessionView(store: memorization, appearance: store, dismissWindow: { [weak self] in self?.memorizationWindow.orderOut(nil); self?.scheduleMemorization() }))
         memorization.scheduleChanged = { [weak self] in self?.scheduleMemorization() }
         scheduleMemorization()
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -424,6 +427,18 @@ if CommandLine.arguments.contains("--check") {
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let store = try ReadingStore(folder: temporary)
         try require(store.chapters.count == 114, "Expected all 114 surahs")
+        try require(store.background == nil, "Default reminder surface must use the paper color")
+        try store.importBackground(Bundle.main.url(forResource: "background", withExtension: "png")!)
+        var backgroundChoice = store.preferences
+        backgroundChoice.customBackground = true
+        try store.save(backgroundChoice)
+        try require(store.background != nil, "Custom reminder image did not load")
+        let customRestored = try ReadingStore(folder: temporary)
+        try require(customRestored.background != nil, "Custom background choice did not survive reopening")
+        backgroundChoice.customBackground = false
+        try store.save(backgroundChoice)
+        let paperRestored = try ReadingStore(folder: temporary)
+        try require(paperRestored.background == nil && FileManager.default.fileExists(atPath: temporary.appendingPathComponent("background.png").path), "Restoring default removed the custom image or did not persist")
         for (tag, draft, preview, expected) in [
             ("v1.10.0", false, false, true), ("v1.9.0", false, false, false),
             ("v1.8.9", false, false, false), ("v1.10.0", true, false, false),

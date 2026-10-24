@@ -16,8 +16,13 @@ if (Test-Path $readingSchedulePath) {
 }
 $script:versesPerReminder = 1
 $script:showTranslation = $true
+$script:useCustomBackground = $true
 if (Test-Path $preferencesPath) {
     $preferences = Get-Content $preferencesPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -ne $preferences.use_custom_background) {
+        if ($preferences.use_custom_background -isnot [bool]) { throw 'Invalid background preference.' }
+        $script:useCustomBackground = $preferences.use_custom_background
+    }
     $script:versesPerReminder = [int]$preferences.verses_per_reminder
     if ($script:versesPerReminder -lt 1 -or $script:versesPerReminder -gt 20) { throw 'Invalid verses per reminder.' }
     if ($null -ne $preferences.show_translation) {
@@ -53,17 +58,17 @@ if (Test-Path $statePath) {
  Title="آية من القرآن" Width="760" Height="500" WindowStartupLocation="CenterScreen"
  Topmost="True" ShowActivated="False" ShowInTaskbar="False" ResizeMode="NoResize"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" FlowDirection="RightToLeft">
- <Border Name="BackgroundCard" CornerRadius="22" BorderBrush="#608D99" BorderThickness="1">
-  <Border Background="#CC0F2933" CornerRadius="22" Padding="32">
+ <Border Name="BackgroundCard" CornerRadius="22" BorderBrush="#D8CEBA" BorderThickness="1">
+  <Border Name="ReadingVeil" Background="Transparent" CornerRadius="22" Padding="32">
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <TextBlock Name="Reference" Foreground="#FFF5DF" FontSize="18" TextAlignment="Center"/>
-   <TextBlock Name="Progress" Grid.Row="1" Margin="0,8,0,22" Foreground="#DFEDF0" FontSize="13" TextAlignment="Center"/>
+   <TextBlock Name="Reference" Foreground="#38515B" FontSize="18" TextAlignment="Center"/>
+   <TextBlock Name="Progress" Grid.Row="1" Margin="0,8,0,22" Foreground="#38515B" FontSize="13" TextAlignment="Center"/>
    <ScrollViewer Name="VerseScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel VerticalAlignment="Center">
-     <TextBlock Name="Verse" FontFamily="Traditional Arabic, Segoe UI" Foreground="#FFFFFF" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
-     <TextBlock Name="Translation" FontFamily="Segoe UI" FontSize="21" Foreground="#F1F5F5" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
-     <TextBlock Name="VerseNumber" FontFamily="Georgia" FontSize="17" Foreground="#FFF5DF" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
+     <TextBlock Name="Verse" FontFamily="Traditional Arabic, Segoe UI" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+     <TextBlock Name="Translation" FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
+     <TextBlock Name="VerseNumber" FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
      <StackPanel Name="AdditionalVerses"/>
     </StackPanel>
    </ScrollViewer>
@@ -71,7 +76,7 @@ if (Test-Path $statePath) {
     <Button Name="Read" Content="✓  قرأتها" Background="#194957" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
     <Button Name="Tafsir" Content="التفسير" Background="#DAE9EB" Foreground="#183B46" FontSize="16" Padding="18,10" Margin="6,0"/>
     <Button Name="Settings" Content="الإعدادات" Background="#DAE9EB" Foreground="#183B46" FontSize="16" Padding="18,10" Margin="6,0"/>
-    <Button Name="Hide" Content="إخفاء" Background="Transparent" BorderBrush="#7AA5B2" Foreground="White" FontSize="16" Padding="18,10" Margin="6,0" ToolTip="إخفاء دون تسجيل قراءة"/>
+    <Button Name="Hide" Content="إخفاء" Background="Transparent" BorderBrush="#C7DBE1" Foreground="#183544" FontSize="16" Padding="18,10" Margin="6,0" ToolTip="إخفاء دون تسجيل قراءة"/>
    </WrapPanel>
   </Grid>
   </Border>
@@ -93,13 +98,21 @@ function Get-BackgroundImage($imagePath) {
         return $bitmap
     } finally { $imageStream.Dispose() }
 }
+function Apply-ReminderBackground($targetWindow, $cardName, $veilName) {
+    $targetWindow.FindName($cardName).Background = $script:reminderBackgroundBrush
+    $targetWindow.FindName($veilName).Background = $script:reminderVeilBrush
+}
 function Update-Background {
-    $backgroundPath = Join-Path $PSScriptRoot 'background.png'
-    if (Test-Path $customBackgroundPath) { $backgroundPath = $customBackgroundPath }
-    $backgroundBrush = [Windows.Media.ImageBrush]::new((Get-BackgroundImage $backgroundPath))
-    $backgroundBrush.Stretch = [Windows.Media.Stretch]::UniformToFill
-    $backgroundBrush.AlignmentY = [Windows.Media.AlignmentY]::Bottom
-    $window.FindName('BackgroundCard').Background = $backgroundBrush
+    $script:reminderBackgroundBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
+    $script:reminderVeilBrush = [Windows.Media.Brushes]::Transparent
+    if ($script:useCustomBackground -and (Test-Path $customBackgroundPath)) {
+        $script:reminderBackgroundBrush = [Windows.Media.ImageBrush]::new((Get-BackgroundImage $customBackgroundPath))
+        $script:reminderBackgroundBrush.Stretch = [Windows.Media.Stretch]::UniformToFill
+        $script:reminderBackgroundBrush.AlignmentY = [Windows.Media.AlignmentY]::Bottom
+        $script:reminderVeilBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#DBF7F3EA')
+    }
+    Apply-ReminderBackground $window 'BackgroundCard' 'ReadingVeil'
+    if ($script:memorizationWindow) { Apply-ReminderBackground $script:memorizationWindow 'MemoBackground' 'MemoVeil' }
 }
 Update-Background
 $window.Width = [Math]::Min(1040, [Windows.SystemParameters]::WorkArea.Width - 48)
@@ -141,10 +154,10 @@ function Hide-Verse {
 function Add-VersePanel($verse) {
     [xml]$verseLayout = @'
 <StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Margin="0,18,0,0">
- <Border Height="1" Background="#668BA9B2" Margin="48,0,48,18"/>
- <TextBlock FontFamily="Traditional Arabic, Segoe UI" Foreground="White" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
- <TextBlock FontFamily="Segoe UI" FontSize="21" Foreground="#F1F5F5" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
- <TextBlock FontFamily="Georgia" FontSize="17" Foreground="#FFF5DF" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
+ <Border Height="1" Background="#D8CEBA" Margin="48,0,48,18"/>
+ <TextBlock FontFamily="Traditional Arabic, Segoe UI" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+ <TextBlock FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
+ <TextBlock FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
 </StackPanel>
 '@
     $versePanel = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($verseLayout))
@@ -370,6 +383,25 @@ if ($Check) {
     [Windows.Threading.Dispatcher]::PushFrame($scheduleFrame)
     $script:memorizationTimer.Stop()
     if (-not $script:memorizationWindow.IsVisible -or -not $window.IsVisible) { throw 'Due memorization was blocked by reading.' }
+    if ($script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.ImageBrush]) { throw 'Custom background was missing from memorization.' }
+    Reset-DefaultBackground
+    if ($window.FindName('BackgroundCard').Background -isnot [Windows.Media.SolidColorBrush] -or $script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.SolidColorBrush]) { throw 'Default background was not restored in both windows.' }
+    if (-not (Test-Path $customBackgroundPath) -or (Get-Content $preferencesPath -Raw | ConvertFrom-Json).use_custom_background -ne $false) { throw 'Default background choice did not persist or removed the custom image.' }
+    Set-CustomBackground (Join-Path $PSScriptRoot 'background.png')
+    if (-not [object]::ReferenceEquals($window.FindName('BackgroundCard').Background, $script:memorizationWindow.FindName('MemoBackground').Background)) { throw 'Changing the background did not update both existing windows.' }
+    $relativeLuminance = {
+        param($channels)
+        $linear = @($channels | ForEach-Object { $channel = $_ / 255.0; if ($channel -le 0.04045) { $channel / 12.92 } else { [Math]::Pow(($channel + 0.055) / 1.055, 2.4) } })
+        return 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2]
+    }
+    $veil = $script:reminderVeilBrush.Color
+    $veilOpacity = $veil.A / 255.0
+    $minimumBackgroundLuminance = & $relativeLuminance @(($veil.R * $veilOpacity), ($veil.G * $veilOpacity), ($veil.B * $veilOpacity))
+    foreach ($textSample in @($verseText, $translationText, $progressText, $script:memorizationWindow.FindName('Status'))) {
+        $ink = $textSample.Foreground.Color
+        $inkLuminance = & $relativeLuminance @($ink.R, $ink.G, $ink.B)
+        if (($minimumBackgroundLuminance + 0.05) / ($inkLuminance + 0.05) -lt 4.5) { throw 'Reminder text contrast failed over a dark custom image.' }
+    }
     Hide-Verse
     Show-Verse
     if (-not $window.IsVisible -or -not $script:memorizationWindow.IsVisible) { throw 'Reading was blocked by memorization.' }

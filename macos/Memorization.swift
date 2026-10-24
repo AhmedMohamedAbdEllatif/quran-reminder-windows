@@ -84,24 +84,28 @@ struct MemorizationPlan: Codable {
 }
 struct MemorizationSessionView: View {
     @ObservedObject var store: MemorizationStore
+    @ObservedObject var appearance: ReadingStore
     let dismissWindow: () -> Void
     @State private var failure: String?
     var body: some View {
         VStack(spacing: 20) {
             Text("حفظ صفحة \(store.plan.page) · الجزء \(store.plan.part + 1) من \(store.parts.count)").font(.title2.bold())
-            Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").foregroundStyle(.secondary)
+            Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").foregroundStyle(ReminderPalette.secondary)
             ScrollView {
                 VStack(spacing: 16) {
-                    ForEach(store.currentLines) { line in Text(line.text).font(.custom("Geeza Pro", size: 32)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
+                    ForEach(store.currentLines) { line in Text(line.text).font(.custom("Geeza Pro", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
                 }
             }
-            Text("قد يبدأ المقطع أو ينتهي داخل آية. التكرار مستقل عن تقدم القراءة.").font(.caption).foregroundStyle(.secondary)
+            Text("قد يبدأ المقطع أو ينتهي داخل آية. التكرار مستقل عن تقدم القراءة.").font(.caption).foregroundStyle(ReminderPalette.secondary)
             HStack {
-                Button("✓ تمت المراجعة") { do { try store.confirm(); dismissWindow() } catch { failure = error.localizedDescription } }.buttonStyle(.borderedProminent)
+                Button("✓ تمت المراجعة") { do { try store.confirm(); dismissWindow() } catch { failure = error.localizedDescription } }.buttonStyle(.borderedProminent).foregroundStyle(.white)
                 Button("إخفاء دون تسجيل") { do { try store.hide(); dismissWindow() } catch { failure = error.localizedDescription } }
             }.controlSize(.large)
             if let failure { Text(failure).foregroundStyle(.red) }
-        }.padding(28).environment(\.layoutDirection, .rightToLeft)
+        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
+            .foregroundStyle(ReminderPalette.ink).background { ReminderSurface(store: appearance) }
+            .preferredColorScheme(.light).tint(Color(red: 0.15, green: 0.36, blue: 0.43))
+            .environment(\.layoutDirection, .rightToLeft)
     }
 }
 struct MemorizationSettingsView: View {

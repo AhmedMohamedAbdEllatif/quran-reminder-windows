@@ -53,21 +53,24 @@ function Confirm-Memorization {
 }
 function New-MemorizationWindow {
     [xml]$markup = @'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1000" Height="650" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" Background="#F4F8F9" Foreground="#193E49">
- <Grid Margin="28">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1000" Height="650" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" Background="#F7F3EA" Foreground="#183544">
+ <Border Name="MemoBackground" CornerRadius="16" BorderBrush="#D8CEBA" BorderThickness="1"><Border Name="MemoVeil" CornerRadius="16" Padding="28">
+ <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
   <TextBlock Name="Title" FontSize="23" FontWeight="SemiBold" TextAlignment="Center"/>
-  <TextBlock Name="Status" Grid.Row="1" FontSize="14" Foreground="#607D86" Margin="0,12,0,20" TextAlignment="Center"/>
+  <TextBlock Name="Status" Grid.Row="1" FontSize="14" Foreground="#38515B" Margin="0,12,0,20" TextAlignment="Center"/>
   <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"><StackPanel Name="Lines"/></ScrollViewer>
   <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
    <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#24596A" Foreground="White" Margin="6,0"/>
    <Button Name="Hide" Content="إخفاء دون تسجيل" Margin="6,0"/>
   </WrapPanel>
  </Grid>
+ </Border></Border>
 </Window>
 '@
     $memoWindow = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup))
     Initialize-WindowStyle $memoWindow
+    Apply-ReminderBackground $memoWindow 'MemoBackground' 'MemoVeil'
     $memoWindow.Width = [Math]::Min(1000, [Windows.SystemParameters]::WorkArea.Width - 48)
     $memoWindow.Height = [Math]::Min(650, [Windows.SystemParameters]::WorkArea.Height - 48)
     $memoWindow.FindName('Confirm').Add_Click({ Confirm-Memorization })

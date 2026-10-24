@@ -12,6 +12,8 @@ function Save-DisplayPreferences($readingPreferences) {
     if ($readingPreferences.show_translation -isnot [bool]) { throw 'Invalid translation preference.' }
     if (-not $readingPreferences.ContainsKey('reading_interval_seconds')) { $readingPreferences.reading_interval_seconds = $script:readingIntervalSeconds }
     if ($readingPreferences.reading_interval_seconds -lt 10 -or $readingPreferences.reading_interval_seconds -gt 86400) { throw 'اختَر وقتًا بين دقيقة و١٤٤٠ دقيقة.' }
+    if (-not $readingPreferences.ContainsKey('use_custom_background')) { $readingPreferences.use_custom_background = $script:useCustomBackground }
+    if ($readingPreferences.use_custom_background -isnot [bool]) { throw 'Invalid background preference.' }
     $serializedPreferences = $readingPreferences | ConvertTo-Json
     $pendingPreferencesPath = $preferencesPath + '.tmp'
     [IO.File]::WriteAllText($pendingPreferencesPath, $serializedPreferences, [Text.Encoding]::UTF8)
@@ -19,6 +21,7 @@ function Save-DisplayPreferences($readingPreferences) {
     else { [IO.File]::Move($pendingPreferencesPath, $preferencesPath) }
     $script:versesPerReminder = $readingPreferences.verses_per_reminder
     $script:showTranslation = $readingPreferences.show_translation
+    $script:useCustomBackground = $readingPreferences.use_custom_background
     $script:readingIntervalSeconds = [int]$readingPreferences.reading_interval_seconds
     $timer.Interval = [TimeSpan]::FromSeconds($script:readingIntervalSeconds)
 }
@@ -31,6 +34,11 @@ function Set-CustomBackground($imagePath) {
     try { $encoder.Save($imageOutput) } finally { $imageOutput.Dispose() }
     if (Test-Path $customBackgroundPath) { [IO.File]::Replace($pendingImagePath, $customBackgroundPath, $customBackgroundPath + '.bak') }
     else { [IO.File]::Move($pendingImagePath, $customBackgroundPath) }
+    Save-DisplayPreferences @{verses_per_reminder=$script:versesPerReminder;show_translation=$script:showTranslation;use_custom_background=$true}
+    Update-Background
+}
+function Reset-DefaultBackground {
+    Save-DisplayPreferences @{verses_per_reminder=$script:versesPerReminder;show_translation=$script:showTranslation;use_custom_background=$false}
     Update-Background
 }
 function New-SettingsWindow {
@@ -115,9 +123,10 @@ function New-SettingsWindow {
    <TabItem Header="الخلفية"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
     <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
-     <Border Background="#660F2933" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="White" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+     <Border Background="#33FFFFFF" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="#183544" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
     </Border>
-    <Button Name="ChooseImage" Content="اختيار صورة من الجهاز" HorizontalAlignment="Right"/>
+    <WrapPanel><Button Name="ChooseImage" Content="اختيار صورة من الجهاز" Margin="0,0,0,8"/>
+     <Button Name="DefaultBackground" Content="استعادة الخلفية الافتراضية" Margin="10,0,0,8"/></WrapPanel>
     <TextBlock Name="ImageName" Text="الخلفية الحالية" Foreground="#607D86" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,22"/>
     <Border Height="1" Background="#DCE8EC" Margin="0,0,0,20"/>
 
@@ -189,7 +198,7 @@ function Show-Settings($selectedTab = 0) {
     $settingsWindow.FindName('SettingsTabs').SelectedIndex = $selectedTab
     $settingsWindow.FindName('ImagePreview').Background = $window.FindName('BackgroundCard').Background
     $planWindow = Initialize-MemorizationTab $settingsWindow
-    $selection = @{ ImagePath = $null }
+    $selection = @{ ImagePath = $null; ResetBackground = $false }
     $settingsWindow.FindName('ReadingInterval').Text = ($script:readingIntervalSeconds / 60).ToString([Globalization.CultureInfo]::CurrentCulture)
     $countChoices = $settingsWindow.FindName('VerseCount')
     foreach ($count in 1..20) {
@@ -220,9 +229,16 @@ function Show-Settings($selectedTab = 0) {
                 $previewBrush.Stretch = [Windows.Media.Stretch]::UniformToFill
                 $settingsWindow.FindName('ImagePreview').Background = $previewBrush
                 $selection.ImagePath = $picker.FileName
+                $selection.ResetBackground = $false
                 $settingsWindow.FindName('ImageName').Text = [IO.Path]::GetFileName($picker.FileName)
             } catch { [Windows.MessageBox]::Show($settingsWindow, 'اختَر صورة سليمة بصيغة PNG أو JPG أو BMP أو GIF.', 'تعذر فتح الصورة') | Out-Null }
         }
+    })
+    $settingsWindow.FindName('DefaultBackground').Add_Click({
+        $selection.ImagePath = $null
+        $selection.ResetBackground = $true
+        $settingsWindow.FindName('ImagePreview').Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
+        $settingsWindow.FindName('ImageName').Text = 'الخلفية الافتراضية — أوف وايت دافئ'
     })
     $settingsWindow.FindName('Cancel').Add_Click({ $settingsWindow.Close() })
     $settingsWindow.FindName('Apply').Add_Click({
@@ -232,6 +248,7 @@ function Show-Settings($selectedTab = 0) {
             if (-not [double]::TryParse($settingsWindow.FindName('ReadingInterval').Text, [ref]$readingMinutes) -or [double]::IsNaN($readingMinutes) -or $readingMinutes -lt 1 -or $readingMinutes -gt 1440) { throw 'اختَر وقتًا بين دقيقة و١٤٤٠ دقيقة.' }
             Save-DisplayPreferences @{ reading_interval_seconds = [int]($readingMinutes * 60); verses_per_reminder = $countChoices.SelectedItem.Count; show_translation = [bool]$settingsWindow.FindName('ShowTranslation').IsChecked }
             if ($selection.ImagePath) { Set-CustomBackground $selection.ImagePath }
+            elseif ($selection.ResetBackground) { Reset-DefaultBackground }
             if ($settingsWindow.FindName('ChangeStart').IsChecked) {
                 Set-StartingVerse $settingsWindow.FindName('Ayah').SelectedItem.Index
             }
