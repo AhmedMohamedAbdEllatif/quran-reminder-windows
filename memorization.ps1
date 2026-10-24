@@ -56,10 +56,10 @@ function New-MemorizationWindow {
   <TextBlock Name="Title" FontSize="23" FontWeight="SemiBold" TextAlignment="Center"/>
   <TextBlock Name="Status" Grid.Row="1" FontSize="14" Foreground="#607D86" Margin="0,12,0,20" TextAlignment="Center"/>
   <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"><StackPanel Name="Lines"/></ScrollViewer>
-  <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
+  <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
    <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#24596A" Foreground="White" Margin="6,0"/>
    <Button Name="Hide" Content="إخفاء دون تسجيل" Margin="6,0"/>
-  </StackPanel>
+  </WrapPanel>
  </Grid>
 </Window>
 '@

@@ -112,7 +112,7 @@ struct ReadingView: View {
                         }
                     }.padding(.horizontal, 12)
                 }
-                HStack(spacing: 12) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 10) {
                     Button(store.displayed.count > 1 ? "✓ قرأتها كلها" : "✓ قرأتها") {
                         do { try store.confirm(); hide() } catch { store.error = error.localizedDescription }
                     }.buttonStyle(.borderedProminent).disabled(store.displayed.isEmpty)
@@ -139,7 +139,7 @@ struct ReadingView: View {
                     }
                 }
                 Button("العودة للآيات") { tafsir = false }.buttonStyle(.borderedProminent)
-            }.padding(28).frame(width: 680, height: 560).environment(\.layoutDirection, .rightToLeft)
+            }.padding(28).frame(width: min(680, (NSScreen.main?.visibleFrame.width ?? 720) - 40), height: min(560, (NSScreen.main?.visibleFrame.height ?? 640) - 60)).environment(\.layoutDirection, .rightToLeft)
         }
         .alert("تعذر إتمام العملية", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("حسنًا") { store.error = nil }
@@ -232,7 +232,7 @@ struct SettingsView: View {
              .allowsHitTesting(selectedTab != 1)
              .accessibilityHidden(selectedTab == 1)
             }
-        }.padding(24).frame(width: 640, height: min(780, (NSScreen.main?.visibleFrame.height ?? 840) - 60)).environment(\.layoutDirection, .rightToLeft)
+        }.padding(24).frame(width: min(640, (NSScreen.main?.visibleFrame.width ?? 720) - 40), height: min(780, (NSScreen.main?.visibleFrame.height ?? 840) - 60)).environment(\.layoutDirection, .rightToLeft)
     }
     func apply() {
         do {
@@ -270,14 +270,16 @@ struct SettingsView: View {
         }
         catch { showFatal(error); return }
         store.showSaveConfirmation = { [weak self] title, message in self?.confirmation.show(title: title, message: message) }
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        window.minSize = NSSize(width: 440, height: 360)
         window.title = "تذكير القرآن"
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.contentView = NSHostingView(rootView: ReadingView(store: store, memorization: memorization, hide: { [weak self] in self?.hideReminder() }))
-        memorizationWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 940, height: 620), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        memorizationWindow = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 620), styleMask: [.titled, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        memorizationWindow.minSize = NSSize(width: 440, height: 360)
         memorizationWindow.title = "الحفظ والمراجعة"
         memorizationWindow.level = .floating
         memorizationWindow.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]

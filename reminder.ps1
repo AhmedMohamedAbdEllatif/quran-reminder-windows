@@ -1,4 +1,4 @@
-﻿param([switch]$Check)
+﻿param([switch]$Check, [string]$PreviewDirectory)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
 . (Join-Path $PSScriptRoot 'ui.ps1')
@@ -54,7 +54,7 @@ if (Test-Path $statePath) {
  Topmost="True" ShowActivated="False" ShowInTaskbar="False" ResizeMode="NoResize"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" FlowDirection="RightToLeft">
  <Border Name="BackgroundCard" CornerRadius="22" BorderBrush="#608D99" BorderThickness="1">
-  <Border Background="#AA0F2933" CornerRadius="22" Padding="32">
+  <Border Background="#CC0F2933" CornerRadius="22" Padding="32">
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <TextBlock Name="Reference" Foreground="#FFF5DF" FontSize="18" TextAlignment="Center"/>
@@ -236,6 +236,9 @@ $timer.Add_Tick({ Show-DueReading })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {
+    Show-SaveConfirmation 'خطة الحفظ اشتغلت' ('أول تذكير بعد ' + (Get-IntervalLabel 600) + '.')
+    if ($script:saveConfirmation.FindName('ConfirmationMessage').Text -ne 'أول تذكير بعد 10 دقيقة.') { throw 'Save confirmation did not explain the reminder time.' }
+    $script:saveConfirmation.Close()
     $script:versesPerReminder = 1
     $initialCount = $script:readCount
     Show-Verse
@@ -393,6 +396,10 @@ if ($Check) {
     $savedMemo = Get-Content $memorizationPath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($savedMemo.interval_seconds -ne 17 -or $savedMemo.part_index -ne 4) { throw 'Custom timing or memorization position did not persist.' }
     $timer.Stop()
+    if ($PreviewDirectory) {
+        . (Join-Path $PSScriptRoot 'tests/appearance.ps1')
+        Test-ReminderAppearance $PreviewDirectory
+    }
     'WPF loaded; 6236 verses loaded; show, confirm, save and hide passed.'
     exit
 }
