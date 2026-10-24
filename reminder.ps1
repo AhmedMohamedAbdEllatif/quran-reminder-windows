@@ -103,13 +103,15 @@ function Apply-ReminderBackground($targetWindow, $cardName, $veilName) {
     $targetWindow.FindName($veilName).Background = $script:reminderVeilBrush
 }
 function Update-Background {
-    $script:reminderBackgroundBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
+    $script:paperBackgroundBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
+    $script:customImageVeilBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#DBF7F3EA')
+    $script:reminderBackgroundBrush = $script:paperBackgroundBrush
     $script:reminderVeilBrush = [Windows.Media.Brushes]::Transparent
     if ($script:useCustomBackground -and (Test-Path $customBackgroundPath)) {
         $script:reminderBackgroundBrush = [Windows.Media.ImageBrush]::new((Get-BackgroundImage $customBackgroundPath))
         $script:reminderBackgroundBrush.Stretch = [Windows.Media.Stretch]::UniformToFill
         $script:reminderBackgroundBrush.AlignmentY = [Windows.Media.AlignmentY]::Bottom
-        $script:reminderVeilBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#DBF7F3EA')
+        $script:reminderVeilBrush = $script:customImageVeilBrush
     }
     Apply-ReminderBackground $window 'BackgroundCard' 'ReadingVeil'
     if ($script:memorizationWindow) { Apply-ReminderBackground $script:memorizationWindow 'MemoBackground' 'MemoVeil' }

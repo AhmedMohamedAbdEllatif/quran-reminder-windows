@@ -196,7 +196,7 @@ struct SettingsView: View {
                 if selectedTab == 2 {
                 Section("خلفية الآيات") {
                     if let image = selectedImage.flatMap({ NSImage(contentsOf: $0) }) ?? (draft.customBackground ? store.background : nil) {
-                        Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().cornerRadius(10)
+                        Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().overlay(ReminderPalette.paper.opacity(0.86)).cornerRadius(10)
                     } else {
                         Text("الخلفية الافتراضية — أوف وايت دافئ").frame(maxWidth: .infinity).frame(height: 90)
                             .foregroundStyle(ReminderPalette.ink).background(ReminderPalette.paper).cornerRadius(10)

@@ -123,7 +123,7 @@ function New-SettingsWindow {
    <TabItem Header="الخلفية"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
     <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
-     <Border Background="#33FFFFFF" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="#183544" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+     <Border Name="PreviewVeil" Background="Transparent" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="#183544" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
     </Border>
     <WrapPanel><Button Name="ChooseImage" Content="اختيار صورة من الجهاز" Margin="0,0,0,8"/>
      <Button Name="DefaultBackground" Content="استعادة الخلفية الافتراضية" Margin="10,0,0,8"/></WrapPanel>
@@ -197,6 +197,8 @@ function Show-Settings($selectedTab = 0) {
     $settingsWindow = New-SettingsWindow
     $settingsWindow.FindName('SettingsTabs').SelectedIndex = $selectedTab
     $settingsWindow.FindName('ImagePreview').Background = $window.FindName('BackgroundCard').Background
+    $settingsWindow.FindName('PreviewVeil').Background = $script:reminderVeilBrush
+    if (-not $script:useCustomBackground -or -not (Test-Path $customBackgroundPath)) { $settingsWindow.FindName('ImageName').Text = 'الخلفية الافتراضية — أوف وايت دافئ' }
     $planWindow = Initialize-MemorizationTab $settingsWindow
     $selection = @{ ImagePath = $null; ResetBackground = $false }
     $settingsWindow.FindName('ReadingInterval').Text = ($script:readingIntervalSeconds / 60).ToString([Globalization.CultureInfo]::CurrentCulture)
@@ -228,6 +230,7 @@ function Show-Settings($selectedTab = 0) {
                 $previewBrush = [Windows.Media.ImageBrush]::new((Get-BackgroundImage $picker.FileName))
                 $previewBrush.Stretch = [Windows.Media.Stretch]::UniformToFill
                 $settingsWindow.FindName('ImagePreview').Background = $previewBrush
+                $settingsWindow.FindName('PreviewVeil').Background = $script:customImageVeilBrush
                 $selection.ImagePath = $picker.FileName
                 $selection.ResetBackground = $false
                 $settingsWindow.FindName('ImageName').Text = [IO.Path]::GetFileName($picker.FileName)
@@ -237,7 +240,8 @@ function Show-Settings($selectedTab = 0) {
     $settingsWindow.FindName('DefaultBackground').Add_Click({
         $selection.ImagePath = $null
         $selection.ResetBackground = $true
-        $settingsWindow.FindName('ImagePreview').Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
+        $settingsWindow.FindName('ImagePreview').Background = $script:paperBackgroundBrush
+        $settingsWindow.FindName('PreviewVeil').Background = [Windows.Media.Brushes]::Transparent
         $settingsWindow.FindName('ImageName').Text = 'الخلفية الافتراضية — أوف وايت دافئ'
     })
     $settingsWindow.FindName('Cancel').Add_Click({ $settingsWindow.Close() })
