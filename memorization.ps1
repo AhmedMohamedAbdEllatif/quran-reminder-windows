@@ -87,7 +87,6 @@ function Show-Memorization {
     $linePanel.Children.Clear()
     foreach ($line in $part.lines) {
         $label = [Windows.Controls.TextBlock]::new()
-        $label.FontFamily = [Windows.Media.FontFamily]::new('Traditional Arabic, Segoe UI')
         $label.FontSize = $fontSize
         $label.TextAlignment = [Windows.TextAlignment]::Center
         $label.TextWrapping = [Windows.TextWrapping]::Wrap

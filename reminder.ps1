@@ -67,7 +67,7 @@ if (Test-Path $statePath) {
    <TextBlock Name="Progress" Grid.Row="1" Margin="0,8,0,22" Foreground="#38515B" FontSize="13" TextAlignment="Center"/>
    <ScrollViewer Name="VerseScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel VerticalAlignment="Center">
-     <TextBlock Name="Verse" FontFamily="Traditional Arabic, Segoe UI" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+     <TextBlock Name="Verse" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
      <TextBlock Name="Translation" FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
      <TextBlock Name="VerseNumber" FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
      <StackPanel Name="AdditionalVerses"/>
@@ -158,7 +158,7 @@ function Add-VersePanel($verse) {
     [xml]$verseLayout = @'
 <StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Margin="0,18,0,0">
  <Border Height="1" Background="#D8CEBA" Margin="48,0,48,18"/>
- <TextBlock FontFamily="Traditional Arabic, Segoe UI" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+ <TextBlock Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
  <TextBlock FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
  <TextBlock FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
 </StackPanel>
@@ -247,6 +247,12 @@ $timer.Add_Tick({ Show-DueReading })
 $expiry.Add_Tick({ Hide-Verse })
 $window.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Verse })
 if ($Check) {
+    $bodyCharacters = [Collections.Generic.HashSet[char]]::new([char[]](($verses.arabic -join '') + ($script:mushafPages.lines.text -join '')))
+    foreach ($character in $bodyCharacters) {
+        if (-not [char]::IsWhiteSpace($character) -and [Globalization.CharUnicodeInfo]::GetUnicodeCategory($character) -ne [Globalization.UnicodeCategory]::Format -and -not $markerGlyphs.CharacterToGlyphMap.ContainsKey($character)) {
+            throw ('Quran font lacks a character: U+' + ([int]$character).ToString('X4'))
+        }
+    }
     $markerProbe = [Windows.Controls.TextBlock]::new()
     foreach ($markerFontSize in @(18, 64)) {
         $markerProbe.FontSize = $markerFontSize

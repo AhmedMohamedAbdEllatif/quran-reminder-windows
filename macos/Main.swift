@@ -108,7 +108,7 @@ struct ReadingView: View {
                         if store.displayed.isEmpty { Text("وصلت إلى نهاية المصحف").font(.title) }
                         ForEach(store.displayed) { verse in
                             VStack(spacing: 14) {
-                                readingVerseText(verse, size: store.preferences.fontSize).font(.custom("Geeza Pro", size: store.preferences.fontSize))
+                                readingVerseText(verse, size: store.preferences.fontSize).font(.custom("AmiriQuran-Regular", size: store.preferences.fontSize))
                                     .accessibilityLabel(verse.arabic + "، الآية " + arabicVerseNumber(verse.ayah))
                                 if store.preferences.translation {
                                     Text(verse.english).font(.system(size: 19)).environment(\.layoutDirection, .leftToRight)

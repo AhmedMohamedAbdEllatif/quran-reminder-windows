@@ -1,9 +1,9 @@
 ﻿$fontDirectory = [Uri]::new($PSScriptRoot.TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar)
-$script:ayahMarkerFont = [Windows.Media.FontFamily]::new($fontDirectory, './AmiriQuran.ttf#Amiri Quran')
+$script:quranFont = [Windows.Media.FontFamily]::new($fontDirectory, './AmiriQuran.ttf#Amiri Quran')
 function Get-ArabicVerseNumber($number) {
     return -join ($number.ToString([Globalization.CultureInfo]::InvariantCulture).ToCharArray() | ForEach-Object { [char](0x0660 + [int]::Parse($_.ToString())) })
 }
-$markerTypeface = [Windows.Media.Typeface]::new($script:ayahMarkerFont, [Windows.FontStyles]::Normal, [Windows.FontWeights]::Normal, [Windows.FontStretches]::Normal)
+$markerTypeface = [Windows.Media.Typeface]::new($script:quranFont, [Windows.FontStyles]::Normal, [Windows.FontWeights]::Normal, [Windows.FontStretches]::Normal)
 $markerGlyphs = $null
 if (-not $markerTypeface.TryGetGlyphTypeface([ref]$markerGlyphs) -or $markerGlyphs.FontUri.LocalPath -ne (Join-Path $PSScriptRoot 'AmiriQuran.ttf') -or -not $markerGlyphs.CharacterToGlyphMap.ContainsKey([char]0x06DD)) { throw 'Bundled Quran marker font is unavailable.' }
 $script:ayahOrnament = $markerGlyphs.GetGlyphOutline($markerGlyphs.CharacterToGlyphMap[0x06DD], 40, 40)
@@ -34,12 +34,14 @@ function Add-AyahMarker($label, $digits) {
     $label.Inlines.Add([Windows.Documents.InlineUIContainer]::new($seal))
 }
 function Set-ReadingVerse($label, $verse) {
+    $label.FontFamily = $script:quranFont
     $label.Inlines.Clear()
     $label.Inlines.Add([Windows.Documents.Run]::new($verse.arabic))
     $label.Inlines.Add([Windows.Documents.Run]::new(' '))
     Add-AyahMarker $label (Get-ArabicVerseNumber ([int]$verse.ayah))
 }
 function Set-MushafLine($label, $text) {
+    $label.FontFamily = $script:quranFont
     $label.Inlines.Clear()
     $cursor = 0
     foreach ($number in [regex]::Matches($text, '[٠-٩]+')) {
