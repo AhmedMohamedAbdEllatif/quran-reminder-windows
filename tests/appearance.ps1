@@ -36,6 +36,27 @@ function Test-ReminderAppearance($destination) {
     Save-Memorization $previewPlan
     Show-Memorization
     Export-WindowPreview $script:memorizationWindow (Join-Path $destination 'memorization-default.png')
+    $previewPlan.part_index = 1
+    Save-Memorization $previewPlan
+    Show-Memorization
+    Export-WindowPreview $script:memorizationWindow (Join-Path $destination 'memorization-second-part.png')
+    $savedFontSize = $script:fontSize
+    $script:fontSize = 64
+    $previewPlan.part_index = 0; $previewPlan.lines_per_part = 15
+    Save-Memorization $previewPlan
+    Show-Memorization
+    $memoScroll = $script:memorizationWindow.FindName('MemoScroll')
+    $script:memorizationWindow.UpdateLayout()
+    if ($memoScroll.ScrollableHeight -le 0) { throw 'A full page at maximum font size must remain scrollable.' }
+    $confirmButton = $script:memorizationWindow.FindName('Confirm')
+    $buttonOrigin = $confirmButton.TranslatePoint([Windows.Point]::new(0, 0), $script:memorizationWindow.Content)
+    if ($buttonOrigin.Y + $confirmButton.ActualHeight -gt $script:memorizationWindow.Content.ActualHeight) { throw 'Memorization confirmation button fell outside the window.' }
+    if ($script:memorizationWindow.Height -gt [Windows.SystemParameters]::WorkArea.Height - 48) { throw 'Memorization exceeded the working screen area.' }
+    Export-WindowPreview $script:memorizationWindow (Join-Path $destination 'memorization-large-font.png')
+    $script:fontSize = $savedFontSize
+    $previewPlan.lines_per_part = 5
+    Save-Memorization $previewPlan
+    Show-Memorization
     Set-CustomBackground (Join-Path (Split-Path -Parent $PSScriptRoot) 'background.png')
     Export-WindowPreview $script:memorizationWindow (Join-Path $destination 'memorization-custom.png')
     Set-StartingVerse 0

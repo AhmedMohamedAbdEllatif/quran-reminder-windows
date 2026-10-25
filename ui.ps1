@@ -53,3 +53,17 @@ function Show-SaveConfirmation($title, $message) {
     $script:saveConfirmation.BeginAnimation([Windows.UIElement]::OpacityProperty, [Windows.Media.Animation.DoubleAnimation]::new(0, 1, [Windows.Duration]::new([TimeSpan]::FromMilliseconds(180))))
     $timer.Start()
 }
+
+function Resize-ReminderSurface($targetWindow, $contentScroll) {
+    $area = [Windows.SystemParameters]::WorkArea
+    $targetWindow.Width = [Math]::Min(1040, $area.Width - 48)
+    $content = $contentScroll.Content
+    $content.InvalidateMeasure()
+    $content.Measure([Windows.Size]::new($targetWindow.Width - 82, [double]::PositiveInfinity))
+    $requiredHeight = [Math]::Ceiling($content.DesiredSize.Height) + 214
+    $targetWindow.Height = [Math]::Min($area.Height - 48, [Math]::Max(540, $requiredHeight))
+    $content.InvalidateMeasure()
+    $contentScroll.InvalidateMeasure()
+    $targetWindow.Left = $area.Left + ($area.Width - $targetWindow.Width) / 2
+    $targetWindow.Top = $area.Top + ($area.Height - $targetWindow.Height) / 2
+}

@@ -284,7 +284,7 @@ struct SettingsView: View {
         let updateDefaults = CommandLine.arguments.contains("--ui-check") ? UserDefaults(suiteName: "QuranReminder-UpdateCheck-" + UUID().uuidString)! : .standard
         updates = UpdateChecker(defaults: updateDefaults)
         store.showSaveConfirmation = { [weak self] title, message in self?.confirmation.show(title: title, message: message) }
-        window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 680), styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 720), styleMask: [.titled, .closable, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
         window.minSize = NSSize(width: 440, height: 360)
         window.title = "تذكير القرآن"
         window.isReleasedWhenClosed = false
@@ -292,7 +292,7 @@ struct SettingsView: View {
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.contentView = NSHostingView(rootView: ReadingView(store: store, memorization: memorization, hide: { [weak self] in self?.hideReminder() }))
-        memorizationWindow = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 620), styleMask: [.titled, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
+        memorizationWindow = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 940, height: 720), styleMask: [.titled, .resizable, .nonactivatingPanel], backing: .buffered, defer: false)
         memorizationWindow.minSize = NSSize(width: 440, height: 360)
         memorizationWindow.title = "الحفظ والمراجعة"
         memorizationWindow.level = .floating
@@ -346,6 +346,7 @@ struct SettingsView: View {
                 self.window.orderOut(nil)
                 self.showReminder()
                 guard self.window.isVisible, self.memorizationWindow.isVisible else { fputs("Reading was blocked by memorization\n", stderr); exit(1) }
+                guard self.window.contentLayoutRect.size == self.memorizationWindow.contentLayoutRect.size else { fputs("Reminder windows have inconsistent dimensions\n", stderr); exit(1) }
                 print("macOS UI check passed: independent reading and memorization windows; confirmation dismissed automatically.")
                 NSApplication.shared.terminate(nil)
             }
@@ -360,12 +361,15 @@ struct SettingsView: View {
             } catch { store.error = error.localizedDescription; return }
         }
         timer?.invalidate()
+        fitReminderWindow(window)
+        window.orderFrontRegardless()
+    }
+    func fitReminderWindow(_ target: NSWindow) {
         if let screen = NSScreen.main {
             let available = screen.visibleFrame
-            window.setContentSize(NSSize(width: min(940, available.width - 40), height: min(720, available.height - 80)))
+            target.setContentSize(NSSize(width: min(940, available.width - 40), height: min(720, available.height - 80)))
         }
-        window.center()
-        window.orderFrontRegardless()
+        target.center()
     }
     func hideReminder() {
         do {
@@ -402,8 +406,7 @@ struct SettingsView: View {
     }
     func showDueMemorization() {
         guard memorization.plan.enabled, memorization.plan.nextDue <= Date(), window.attachedSheet == nil, !memorizationWindow.isVisible, !memorization.currentLines.isEmpty else { return }
-        if let screen = NSScreen.main { memorizationWindow.setContentSize(NSSize(width: min(940, screen.visibleFrame.width - 40), height: min(620, screen.visibleFrame.height - 80))) }
-        memorizationWindow.center()
+        fitReminderWindow(memorizationWindow)
         memorizationWindow.orderFrontRegardless()
     }
     @objc func openLatestRelease() {

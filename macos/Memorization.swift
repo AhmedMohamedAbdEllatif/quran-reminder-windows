@@ -89,12 +89,12 @@ struct MemorizationSessionView: View {
     @State private var failure: String?
     var body: some View {
         VStack(spacing: 20) {
-            Text("حفظ صفحة \(store.plan.page) · الجزء \(store.plan.part + 1) من \(store.parts.count)").font(.title2.bold())
-            Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").foregroundStyle(ReminderPalette.secondary)
+            Text("حفظ صفحة \(store.plan.page) · الجزء \(store.plan.part + 1) من \(store.parts.count)").font(.title2.weight(.semibold))
+            Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").font(.caption).foregroundStyle(ReminderPalette.secondary)
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 24) {
                     ForEach(store.currentLines) { line in mushafLineText(line.text, size: appearance.preferences.fontSize).accessibilityLabel(line.text).font(.custom("Geeza Pro", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
-                }
+                }.padding(.horizontal, 12)
             }
             Text("قد يبدأ المقطع أو ينتهي داخل آية. التكرار مستقل عن تقدم القراءة.").font(.caption).foregroundStyle(ReminderPalette.secondary)
             HStack {

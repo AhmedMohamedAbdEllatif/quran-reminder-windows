@@ -179,15 +179,9 @@ function Update-TranslationVisibility {
     }
 }
 function Resize-Reminder {
-    $availableHeight = [Windows.SystemParameters]::WorkArea.Height - 48
-    $readingContent = $window.FindName('VerseScroll').Content
-    $readingContent.InvalidateMeasure()
-    $readingContent.Measure([Windows.Size]::new($window.Width - 82, [double]::PositiveInfinity))
-    $requiredHeight = [Math]::Ceiling($readingContent.DesiredSize.Height) + 214
-    $window.Height = [Math]::Min($availableHeight, [Math]::Max(540, $requiredHeight))
-    $readingContent.InvalidateMeasure()
-    $window.FindName('VerseScroll').InvalidateMeasure()
+    Resize-ReminderSurface $window $window.FindName('VerseScroll')
 }
+
 function Show-Verse {
     if ($script:memorizationSettingsOpen) { $script:readingPending = $true; return }
     $script:readingPending = $false
@@ -401,6 +395,7 @@ if ($Check) {
     [Windows.Threading.Dispatcher]::PushFrame($scheduleFrame)
     $script:memorizationTimer.Stop()
     if (-not $script:memorizationWindow.IsVisible -or -not $window.IsVisible) { throw 'Due memorization was blocked by reading.' }
+    if ($script:memorizationWindow.Width -ne $window.Width) { throw 'Reading and memorization must share a responsive width.' }
     if ($script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.ImageBrush]) { throw 'Custom background was missing from memorization.' }
     Reset-DefaultBackground
     if ($window.FindName('BackgroundCard').Background -isnot [Windows.Media.SolidColorBrush] -or $script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.SolidColorBrush]) { throw 'Default background was not restored in both windows.' }

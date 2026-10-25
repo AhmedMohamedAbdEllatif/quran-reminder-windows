@@ -53,16 +53,16 @@ function Confirm-Memorization {
 }
 function New-MemorizationWindow {
     [xml]$markup = @'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1000" Height="650" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" Background="#F7F3EA" Foreground="#183544">
- <Border Name="MemoBackground" CornerRadius="16" BorderBrush="#D8CEBA" BorderThickness="1"><Border Name="MemoVeil" CornerRadius="16" Padding="28">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1040" Height="540" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent" Foreground="#183544">
+ <Border Name="MemoBackground" CornerRadius="22" BorderBrush="#D8CEBA" BorderThickness="1"><Border Name="MemoVeil" CornerRadius="22" Padding="32">
  <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <TextBlock Name="Title" FontSize="23" FontWeight="SemiBold" TextAlignment="Center"/>
-  <TextBlock Name="Status" Grid.Row="1" FontSize="14" Foreground="#38515B" Margin="0,12,0,20" TextAlignment="Center"/>
-  <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"><StackPanel Name="Lines"/></ScrollViewer>
-  <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,0">
-   <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#24596A" Foreground="White" Margin="6,0"/>
-   <Button Name="Hide" Content="إخفاء دون تسجيل" Margin="6,0"/>
+  <TextBlock Name="Title" Foreground="#38515B" FontSize="18" TextAlignment="Center"/>
+  <TextBlock Name="Status" Grid.Row="1" FontSize="13" Foreground="#38515B" Margin="0,8,0,22" TextAlignment="Center"/>
+  <ScrollViewer Name="MemoScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Name="Lines" VerticalAlignment="Center"/></ScrollViewer>
+  <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
+   <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#194957" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
+   <Button Name="Hide" Content="إخفاء دون تسجيل" Background="Transparent" Foreground="#183544" FontSize="16" Padding="18,10" Margin="6,0"/>
   </WrapPanel>
  </Grid>
  </Border></Border>
@@ -71,8 +71,6 @@ function New-MemorizationWindow {
     $memoWindow = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($markup))
     Initialize-WindowStyle $memoWindow
     Apply-ReminderBackground $memoWindow 'MemoBackground' 'MemoVeil'
-    $memoWindow.Width = [Math]::Min(1000, [Windows.SystemParameters]::WorkArea.Width - 48)
-    $memoWindow.Height = [Math]::Min(650, [Windows.SystemParameters]::WorkArea.Height - 48)
     $memoWindow.FindName('Confirm').Add_Click({ Confirm-Memorization })
     $memoWindow.FindName('Hide').Add_Click({ Hide-Memorization })
     $memoWindow.Add_Closing({ param($sender, $eventArgs) $eventArgs.Cancel = $true; Hide-Memorization })
@@ -89,14 +87,17 @@ function Show-Memorization {
     $linePanel.Children.Clear()
     foreach ($line in $part.lines) {
         $label = [Windows.Controls.TextBlock]::new()
-        $label.FontFamily = [Windows.Media.FontFamily]::new('Traditional Arabic')
+        $label.FontFamily = [Windows.Media.FontFamily]::new('Traditional Arabic, Segoe UI')
         $label.FontSize = $fontSize
         $label.TextAlignment = [Windows.TextAlignment]::Center
         $label.TextWrapping = [Windows.TextWrapping]::Wrap
-        $label.Margin = [Windows.Thickness]::new(0, 8, 0, 8)
+        $label.Padding = [Windows.Thickness]::new(8)
+        $label.Margin = [Windows.Thickness]::new(0, 4, 0, 4)
         $linePanel.Children.Add($label) | Out-Null
         Set-MushafLine $label $line.text
     }
+    Resize-ReminderSurface $script:memorizationWindow $script:memorizationWindow.FindName('MemoScroll')
+    $script:memorizationWindow.FindName('MemoScroll').ScrollToTop()
     $script:memorizationWindow.Show()
 }
 function Update-MemorizationPages($planWindow) {
