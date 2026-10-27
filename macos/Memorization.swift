@@ -87,14 +87,17 @@ struct MemorizationSessionView: View {
     @ObservedObject var appearance: ReadingStore
     let dismissWindow: () -> Void
     @State private var failure: String?
+    private var selectedText: String { store.currentLines.map(\.text).joined(separator: " ") }
     var body: some View {
         VStack(spacing: 20) {
             Text("حفظ صفحة \(store.plan.page) · الجزء \(store.plan.part + 1) من \(store.parts.count)").font(.title2.weight(.semibold))
             Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").font(.caption).foregroundStyle(ReminderPalette.secondary)
             ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(store.currentLines) { line in mushafLineText(line.text, size: appearance.preferences.fontSize).accessibilityLabel(line.text).font(.custom("AmiriQuran-Regular", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
-                }.padding(.horizontal, 12)
+                mushafLineText(selectedText, size: appearance.preferences.fontSize)
+                    .accessibilityLabel(selectedText)
+                    .font(.custom("AmiriQuran-Regular", size: appearance.preferences.fontSize))
+                    .multilineTextAlignment(.center).frame(maxWidth: 900)
+                    .padding(.horizontal, 12).frame(maxWidth: .infinity)
             }
             Text("قد يبدأ المقطع أو ينتهي داخل آية. التكرار مستقل عن تقدم القراءة.").font(.caption).foregroundStyle(ReminderPalette.secondary)
             HStack {

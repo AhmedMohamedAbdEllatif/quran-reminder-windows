@@ -401,6 +401,13 @@ if ($Check) {
     [Windows.Threading.Dispatcher]::PushFrame($scheduleFrame)
     $script:memorizationTimer.Stop()
     if (-not $script:memorizationWindow.IsVisible -or -not $window.IsVisible) { throw 'Due memorization was blocked by reading.' }
+    $memoBody = $script:memorizationWindow.FindName('Lines').Children[0]
+    $renderedMemo = -join @($memoBody.Inlines | ForEach-Object {
+        if ($_ -is [Windows.Documents.Run]) { $_.Text } else { $_.Child.Tag }
+    })
+    $selectedMemoText = (@(Get-MemorizationParts $script:memorization)[$script:memorization.part_index].lines.text -join ' ')
+    if ($renderedMemo -cne $selectedMemoText) { throw 'Flowing memorization text lost or reordered selected words or ayah numbers.' }
+    if ($memoBody.FontSize -ne $fontSize) { throw 'Flowing memorization text changed the chosen font size.' }
     if ($script:memorizationWindow.Width -ne $window.Width) { throw 'Reading and memorization must share a responsive width.' }
     if ($script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.ImageBrush]) { throw 'Custom background was missing from memorization.' }
     Reset-DefaultBackground

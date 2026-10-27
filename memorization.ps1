@@ -85,16 +85,14 @@ function Show-Memorization {
     $script:memorizationWindow.FindName('Status').Text = 'المراجعة ' + ($script:memorization.confirmed_repeats + 1) + ' من ' + $script:memorization.repeat_count + ' · أسطر المصحف ' + $part.lines[0].number + '–' + $part.lines[-1].number + ' · قد يبدأ المقطع أو ينتهي داخل آية'
     $linePanel = $script:memorizationWindow.FindName('Lines')
     $linePanel.Children.Clear()
-    foreach ($line in $part.lines) {
-        $label = [Windows.Controls.TextBlock]::new()
-        $label.FontSize = $fontSize
-        $label.TextAlignment = [Windows.TextAlignment]::Center
-        $label.TextWrapping = [Windows.TextWrapping]::Wrap
-        $label.Padding = [Windows.Thickness]::new(8, 4, 8, 4)
-        $label.Margin = [Windows.Thickness]::new(0, 2, 0, 2)
-        $linePanel.Children.Add($label) | Out-Null
-        Set-MushafLine $label $line.text
-    }
+    $label = [Windows.Controls.TextBlock]::new()
+    $label.FontSize = $fontSize
+    $label.MaxWidth = 900
+    $label.TextAlignment = [Windows.TextAlignment]::Center
+    $label.TextWrapping = [Windows.TextWrapping]::Wrap
+    $label.Padding = [Windows.Thickness]::new(8, 4, 8, 4)
+    $linePanel.Children.Add($label) | Out-Null
+    Set-MushafLine $label ($part.lines.text -join ' ')
     Resize-ReminderSurface $script:memorizationWindow $script:memorizationWindow.FindName('MemoScroll')
     $script:memorizationWindow.FindName('MemoScroll').ScrollToTop()
     $script:memorizationWindow.Show()
