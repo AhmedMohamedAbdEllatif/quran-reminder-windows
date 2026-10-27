@@ -1,0 +1,70 @@
+name: Publish verified release
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing draft release tag
+        required: true
+      verified_run_id:
+        description: Successful macOS build and Intel verification run
+        required: true
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      VERIFIED_RUN: ${{ inputs.verified_run_id }}
+    steps:
+      - name: Verify build provenance
+        id: verified
+        run: |
+          [[ "$VERIFIED_RUN" =~ ^[0-9]+$ ]]
+          gh api "repos/$GH_REPO/actions/runs/$VERIFIED_RUN" > "$RUNNER_TEMP/verified-run.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads((Path(os.environ['RUNNER_TEMP']) / 'verified-run.json').read_text())
+          assert run['status'] == 'completed' and run['conclusion'] == 'success'
+          assert run['name'] == 'macOS build' and run['repository']['full_name'] == os.environ['GH_REPO']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('sha=' + run['head_sha'] + '\n')
+          PY
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.verified.outputs.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: QuranReminder-macOS
+          run-id: ${{ inputs.verified_run_id }}
+          github-token: ${{ github.token }}
+          path: release-assets
+      - name: Package Windows and verify versions
+        run: |
+          python3 - <<'PY'
+          import os, plistlib, zipfile
+          from pathlib import Path
+          version = Path('version.txt').read_text().strip()
+          assert os.environ['RELEASE_TAG'] == 'v' + version
+          with zipfile.ZipFile('release-assets/QuranReminder-macOS.zip') as archive:
+              assert archive.testzip() is None
+              assert plistlib.loads(archive.read('Quran Reminder.app/Contents/Info.plist'))['CFBundleShortVersionString'] == version
+          names = 'reminder.ps1 verse-markers.ps1 AmiriQuran.ttf Amiri-OFL.txt updates.ps1 version.txt settings.ps1 tafsir.ps1 memorization.ps1 mushaf-lines.json tanzil-uthmani-1.1.txt ui.ps1 ui.xaml config.json verses.json background.png Start.vbs Install.vbs install.ps1 README.txt README.md LICENSE THIRD_PARTY_NOTICES.md'.split()
+          with zipfile.ZipFile('release-assets/QuranReminder-Windows.zip', 'w', zipfile.ZIP_DEFLATED) as archive:
+              for name in names:
+                  archive.write(name, 'QuranReminder-Windows/' + name)
+          PY
+      - name: Publish draft with verified packages
+        env:
+          SOURCE_SHA: ${{ steps.verified.outputs.sha }}
+        run: |
+          test "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$RELEASE_TAG" release-assets/QuranReminder-Windows.zip release-assets/QuranReminder-macOS.zip --clobber
+          gh release edit "$RELEASE_TAG" --target "$SOURCE_SHA" --draft=false --latest
