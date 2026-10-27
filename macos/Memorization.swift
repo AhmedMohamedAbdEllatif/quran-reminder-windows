@@ -92,7 +92,7 @@ struct MemorizationSessionView: View {
             Text("حفظ صفحة \(store.plan.page) · الجزء \(store.plan.part + 1) من \(store.parts.count)").font(.title2.weight(.semibold))
             Text("المراجعة \(store.plan.completedRepeats + 1) من \(store.plan.repeats) · مقطع من أسطر المصحف").font(.caption).foregroundStyle(ReminderPalette.secondary)
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 12) {
                     ForEach(store.currentLines) { line in mushafLineText(line.text, size: appearance.preferences.fontSize).accessibilityLabel(line.text).font(.custom("AmiriQuran-Regular", size: appearance.preferences.fontSize)).multilineTextAlignment(.center).frame(maxWidth: .infinity) }
                 }.padding(.horizontal, 12)
             }
@@ -104,7 +104,7 @@ struct MemorizationSessionView: View {
             if let failure { Text(failure).foregroundStyle(.red) }
         }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity)
             .foregroundStyle(ReminderPalette.ink).background { ReminderSurface(store: appearance) }
-            .preferredColorScheme(.light).tint(Color(red: 0.15, green: 0.36, blue: 0.43))
+            .preferredColorScheme(.light).tint(ReminderPalette.accent)
             .environment(\.layoutDirection, .rightToLeft)
     }
 }

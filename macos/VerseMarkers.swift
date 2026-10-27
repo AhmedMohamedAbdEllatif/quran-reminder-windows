@@ -49,7 +49,7 @@ func arabicVerseNumber(_ number: Int) -> String {
         let path = outline!
         return NSImage(size: NSSize(width: size, height: size), flipped: false) { rectangle in
             guard let context = NSGraphicsContext.current?.cgContext else { return false }
-            let ink = NSColor(srgbRed: 24 / 255, green: 53 / 255, blue: 68 / 255, alpha: 1)
+            let ink = NSColor(ReminderPalette.ink)
             drawOutline(path, in: rectangle, context: context, ink: ink)
             let factor = digits.count >= 3 ? 0.36 : 0.42
             let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: size * factor), .foregroundColor: ink]

@@ -16,6 +16,9 @@ function Test-ReminderAppearance($destination) {
     Show-Verse
     Export-WindowPreview $window (Join-Path $destination 'reading-group.png')
     Set-VersesPerReminder 1
+    Set-StartingVerse 192
+    Show-Verse
+    Export-WindowPreview $window (Join-Path $destination 'reading-editorial.png')
     Set-StartingVerse 288
     Show-Verse
     Export-WindowPreview $window (Join-Path $destination 'long-verse.png')

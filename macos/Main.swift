@@ -111,13 +111,13 @@ struct ReadingView: View {
                                 readingVerseText(verse, size: store.preferences.fontSize).font(.custom("AmiriQuran-Regular", size: store.preferences.fontSize))
                                     .accessibilityLabel(verse.arabic + "، الآية " + arabicVerseNumber(verse.ayah))
                                 if store.preferences.translation {
-                                    Text(verse.english).font(.system(size: 19)).environment(\.layoutDirection, .leftToRight)
+                                    Text(verse.english).font(.custom("Georgia", size: 21)).lineSpacing(7).foregroundStyle(ReminderPalette.secondary).environment(\.layoutDirection, .leftToRight)
                                 }
-                                Text("\(verse.surah_name) · الآية \(verse.ayah)").font(.caption)
+                                Text("[Quran \(verse.surah_number):\(verse.ayah)]").font(.custom("Georgia", size: 23).weight(.semibold)).environment(\.layoutDirection, .leftToRight)
                                 Divider().overlay(ReminderPalette.edge)
                             }.multilineTextAlignment(.center).frame(maxWidth: .infinity)
                         }
-                    }.padding(.horizontal, 12)
+                    }.padding(.horizontal, 12).frame(maxWidth: 900)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 10) {
                     Button(store.displayed.count > 1 ? "✓ قرأتها كلها" : "✓ قرأتها") {
@@ -129,7 +129,7 @@ struct ReadingView: View {
                     Button("إخفاء", action: hide)
                 }.controlSize(.large).buttonStyle(.bordered)
             }.padding(28).foregroundStyle(ReminderPalette.ink)
-        }.preferredColorScheme(.light).clipped().tint(Color(red: 0.15, green: 0.36, blue: 0.43))
+        }.preferredColorScheme(.light).clipped().tint(ReminderPalette.accent)
         .environment(\.layoutDirection, .rightToLeft)
         .sheet(isPresented: $settings) { SettingsView(store: store, memorization: memorization) }
         .sheet(isPresented: $memorizationSettings) { SettingsView(store: store, memorization: memorization, initialTab: 1) }
@@ -198,9 +198,9 @@ struct SettingsView: View {
                 if selectedTab == 2 {
                 Section("خلفية الآيات") {
                     if let image = selectedImage.flatMap({ NSImage(contentsOf: $0) }) ?? (draft.customBackground ? store.background : nil) {
-                        Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().overlay(ReminderPalette.paper.opacity(0.86)).cornerRadius(10)
+                        Image(nsImage: image).resizable().scaledToFill().frame(height: 90).clipped().overlay(ReminderPalette.paper.opacity(0.92)).cornerRadius(10)
                     } else {
-                        Text("الخلفية الافتراضية — أوف وايت دافئ").frame(maxWidth: .infinity).frame(height: 90)
+                        EditorialPaper().frame(height: 90).overlay(Text("الخلفية الافتراضية — بيج وظلال هادئة"))
                             .foregroundStyle(ReminderPalette.ink).background(ReminderPalette.paper).cornerRadius(10)
                     }
                     Button("استعادة الخلفية الافتراضية") { selectedImage = nil; draft.customBackground = false }

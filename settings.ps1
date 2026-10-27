@@ -123,7 +123,7 @@ function New-SettingsWindow {
    <TabItem Header="الخلفية"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel Margin="8,8,8,16">
     <TextBlock Text="خلفية الآيات" FontWeight="SemiBold" Margin="0,0,0,10"/>
     <Border Name="ImagePreview" Height="100" CornerRadius="12" Margin="0,0,0,12">
-     <Border Name="PreviewVeil" Background="Transparent" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="#183544" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+     <Border Name="PreviewVeil" Background="Transparent" CornerRadius="12"><TextBlock Text="معاينة الخلفية" Foreground="#302B22" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
     </Border>
     <WrapPanel><Button Name="ChooseImage" Content="اختيار صورة من الجهاز" Margin="0,0,0,8"/>
      <Button Name="DefaultBackground" Content="استعادة الخلفية الافتراضية" Margin="10,0,0,8"/></WrapPanel>

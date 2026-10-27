@@ -53,16 +53,16 @@ function Confirm-Memorization {
 }
 function New-MemorizationWindow {
     [xml]$markup = @'
-<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1040" Height="540" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent" Foreground="#183544">
- <Border Name="MemoBackground" CornerRadius="22" BorderBrush="#D8CEBA" BorderThickness="1"><Border Name="MemoVeil" CornerRadius="22" Padding="32">
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Title="الحفظ والمراجعة" Width="1040" Height="540" Topmost="True" ShowActivated="False" ShowInTaskbar="False" WindowStartupLocation="CenterScreen" FlowDirection="RightToLeft" WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent" Foreground="#302B22">
+ <Border Name="MemoBackground" CornerRadius="22" BorderBrush="#D6CCBA" BorderThickness="1"><Border Name="MemoVeil" CornerRadius="22" Padding="32">
  <Grid>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <TextBlock Name="Title" Foreground="#38515B" FontSize="18" TextAlignment="Center"/>
-  <TextBlock Name="Status" Grid.Row="1" FontSize="13" Foreground="#38515B" Margin="0,8,0,22" TextAlignment="Center"/>
+  <TextBlock Name="Title" Foreground="#5D5547" FontSize="18" TextAlignment="Center"/>
+  <TextBlock Name="Status" Grid.Row="1" FontSize="13" Foreground="#5D5547" Margin="0,8,0,22" TextAlignment="Center"/>
   <ScrollViewer Name="MemoScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Name="Lines" VerticalAlignment="Center"/></ScrollViewer>
   <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
-   <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#194957" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
-   <Button Name="Hide" Content="إخفاء دون تسجيل" Background="Transparent" Foreground="#183544" FontSize="16" Padding="18,10" Margin="6,0"/>
+   <Button Name="Confirm" Content="✓ تمت المراجعة" Background="#41392E" BorderBrush="#41392E" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
+   <Button Name="Hide" Content="إخفاء دون تسجيل" BorderBrush="#CBBFA9" Background="Transparent" Foreground="#302B22" FontSize="16" Padding="18,10" Margin="6,0"/>
   </WrapPanel>
  </Grid>
  </Border></Border>
@@ -90,8 +90,8 @@ function Show-Memorization {
         $label.FontSize = $fontSize
         $label.TextAlignment = [Windows.TextAlignment]::Center
         $label.TextWrapping = [Windows.TextWrapping]::Wrap
-        $label.Padding = [Windows.Thickness]::new(8)
-        $label.Margin = [Windows.Thickness]::new(0, 4, 0, 4)
+        $label.Padding = [Windows.Thickness]::new(8, 4, 8, 4)
+        $label.Margin = [Windows.Thickness]::new(0, 2, 0, 2)
         $linePanel.Children.Add($label) | Out-Null
         Set-MushafLine $label $line.text
     }

@@ -59,25 +59,25 @@ if (Test-Path $statePath) {
  Title="آية من القرآن" Width="760" Height="500" WindowStartupLocation="CenterScreen"
  Topmost="True" ShowActivated="False" ShowInTaskbar="False" ResizeMode="NoResize"
  WindowStyle="None" AllowsTransparency="True" Background="Transparent" FlowDirection="RightToLeft">
- <Border Name="BackgroundCard" CornerRadius="22" BorderBrush="#D8CEBA" BorderThickness="1">
+ <Border Name="BackgroundCard" CornerRadius="22" BorderBrush="#D6CCBA" BorderThickness="1">
   <Border Name="ReadingVeil" Background="Transparent" CornerRadius="22" Padding="32">
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <TextBlock Name="Reference" Foreground="#38515B" FontSize="18" TextAlignment="Center"/>
-   <TextBlock Name="Progress" Grid.Row="1" Margin="0,8,0,22" Foreground="#38515B" FontSize="13" TextAlignment="Center"/>
+   <TextBlock Name="Reference" Foreground="#5D5547" FontSize="18" TextAlignment="Center"/>
+   <TextBlock Name="Progress" Grid.Row="1" Margin="0,8,0,22" Foreground="#5D5547" FontSize="13" TextAlignment="Center"/>
    <ScrollViewer Name="VerseScroll" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel VerticalAlignment="Center">
-     <TextBlock Name="Verse" Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
-     <TextBlock Name="Translation" FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
-     <TextBlock Name="VerseNumber" FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
+    <StackPanel VerticalAlignment="Center" MaxWidth="900" HorizontalAlignment="Center">
+     <TextBlock Name="Verse" Foreground="#302B22" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+     <TextBlock Name="Translation" FontFamily="Georgia" FontSize="21" LineHeight="32" Foreground="#5D5547" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
+     <TextBlock Name="VerseNumber" FontFamily="Georgia" FontSize="23" FontWeight="SemiBold" Foreground="#302B22" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
      <StackPanel Name="AdditionalVerses"/>
     </StackPanel>
    </ScrollViewer>
    <WrapPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
-    <Button Name="Read" Content="✓  قرأتها" Background="#194957" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
-    <Button Name="Tafsir" Content="التفسير" Background="#DAE9EB" Foreground="#183B46" FontSize="16" Padding="18,10" Margin="6,0"/>
-    <Button Name="Settings" Content="الإعدادات" Background="#DAE9EB" Foreground="#183B46" FontSize="16" Padding="18,10" Margin="6,0"/>
-    <Button Name="Hide" Content="إخفاء" Background="Transparent" BorderBrush="#C7DBE1" Foreground="#183544" FontSize="16" Padding="18,10" Margin="6,0" ToolTip="إخفاء دون تسجيل قراءة"/>
+    <Button Name="Read" Content="✓  قرأتها" Background="#41392E" BorderBrush="#41392E" Foreground="White" FontSize="18" Padding="24,10" Margin="6,0"/>
+    <Button Name="Tafsir" Content="التفسير" Background="#E8DFD0" BorderBrush="#CBBFA9" Foreground="#41392E" FontSize="16" Padding="18,10" Margin="6,0"/>
+    <Button Name="Settings" Content="الإعدادات" Background="#E8DFD0" BorderBrush="#CBBFA9" Foreground="#41392E" FontSize="16" Padding="18,10" Margin="6,0"/>
+    <Button Name="Hide" Content="إخفاء" Background="Transparent" BorderBrush="#CBBFA9" Foreground="#302B22" FontSize="16" Padding="18,10" Margin="6,0" ToolTip="إخفاء دون تسجيل قراءة"/>
    </WrapPanel>
   </Grid>
   </Border>
@@ -104,8 +104,8 @@ function Apply-ReminderBackground($targetWindow, $cardName, $veilName) {
     $targetWindow.FindName($veilName).Background = $script:reminderVeilBrush
 }
 function Update-Background {
-    $script:paperBackgroundBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#F7F3EA')
-    $script:customImageVeilBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#DBF7F3EA')
+    $script:paperBackgroundBrush = $window.FindResource('EditorialPaper')
+    $script:customImageVeilBrush = [Windows.Media.BrushConverter]::new().ConvertFromString('#EBF1EBE0')
     $script:reminderBackgroundBrush = $script:paperBackgroundBrush
     $script:reminderVeilBrush = [Windows.Media.Brushes]::Transparent
     if ($script:useCustomBackground -and (Test-Path $customBackgroundPath)) {
@@ -157,17 +157,17 @@ function Hide-Verse {
 function Add-VersePanel($verse) {
     [xml]$verseLayout = @'
 <StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Margin="0,18,0,0">
- <Border Height="1" Background="#D8CEBA" Margin="48,0,48,18"/>
- <TextBlock Foreground="#183544" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
- <TextBlock FontFamily="Segoe UI" FontSize="21" Foreground="#38515B" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
- <TextBlock FontFamily="Georgia" FontSize="17" Foreground="#38515B" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
+ <Border Height="1" Background="#D6CCBA" Margin="48,0,48,18"/>
+ <TextBlock Foreground="#302B22" TextWrapping="Wrap" TextAlignment="Center" Padding="8"/>
+ <TextBlock FontFamily="Georgia" FontSize="21" LineHeight="32" Foreground="#5D5547" FlowDirection="LeftToRight" TextWrapping="Wrap" TextAlignment="Center" Margin="12,12,12,16"/>
+ <TextBlock FontFamily="Georgia" FontSize="23" FontWeight="SemiBold" Foreground="#302B22" FlowDirection="LeftToRight" TextAlignment="Center" Margin="0,6,0,8"/>
 </StackPanel>
 '@
     $versePanel = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($verseLayout))
     $versePanel.Children[1].FontSize = $fontSize
     Set-ReadingVerse $versePanel.Children[1] $verse
     $versePanel.Children[2].Text = $verse.english
-    $versePanel.Children[3].Text = 'Quran ' + $verse.surah_number + ':' + $verse.ayah
+    $versePanel.Children[3].Text = '[Quran ' + $verse.surah_number + ':' + $verse.ayah + ']'
     $window.FindName('AdditionalVerses').Children.Add($versePanel) | Out-Null
 }
 function Update-TranslationVisibility {
@@ -202,7 +202,7 @@ function Show-Verse {
         $reference.Text = $currentVerse.surah_name + ' · الآية ' + $currentVerse.ayah
         Set-ReadingVerse $verseText $currentVerse
         $translationText.Text = $currentVerse.english
-        $verseNumberText.Text = 'Quran ' + $currentVerse.surah_number + ':' + $currentVerse.ayah
+        $verseNumberText.Text = '[Quran ' + $currentVerse.surah_number + ':' + $currentVerse.ayah + ']'
         for ($offset = 1; $offset -lt $script:displayedCount; $offset++) {
             Add-VersePanel $verses[$script:currentIndex + $offset]
         }
@@ -285,12 +285,12 @@ if ($Check) {
     if ($verseText.Inlines.FirstInline.Text -ne $verses[$script:currentIndex].arabic) { throw 'Next verse text mismatch.' }
     if ($verseText.Inlines.LastInline.Child.Tag -ne (Get-ArabicVerseNumber ([int]$verses[$script:currentIndex].ayah))) { throw 'Reading verse ornament has the wrong number.' }
     if ($translationText.Text -ne $verses[$script:currentIndex].english) { throw 'Translation mismatch.' }
-    $expectedReference = 'Quran ' + $verses[$script:currentIndex].surah_number + ':' + $verses[$script:currentIndex].ayah
+    $expectedReference = '[Quran ' + $verses[$script:currentIndex].surah_number + ':' + $verses[$script:currentIndex].ayah + ']'
     if ($verseNumberText.Text -ne $expectedReference) { throw 'Verse reference mismatch.' }
     $countBeforeJump = $script:readCount
     Set-StartingVerse 2993
     Show-Verse
-    if ($verseNumberText.Text -ne 'Quran 26:62' -or $script:readCount -ne $countBeforeJump) { throw 'Starting verse changed reading count or used the wrong reference.' }
+    if ($verseNumberText.Text -ne '[Quran 26:62]' -or $script:readCount -ne $countBeforeJump) { throw 'Starting verse changed reading count or used the wrong reference.' }
     $jumpRecord = Get-Content $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($jumpRecord.current_index -ne 2993) { throw 'Starting verse was not saved.' }
     $settingsCheck = New-SettingsWindow
@@ -338,7 +338,7 @@ if ($Check) {
     Show-Verse
     if ($script:displayedCount -ne 3 -or $window.FindName('AdditionalVerses').Children.Count -ne 2) { throw 'Multiple verse display mismatch.' }
     $thirdPanel = $window.FindName('AdditionalVerses').Children[1]
-    if ($thirdPanel.Children[2].Text -ne $verses[2].english -or $thirdPanel.Children[3].Text -ne 'Quran 1:3') { throw 'Grouped translation or reference mismatch.' }
+    if ($thirdPanel.Children[2].Text -ne $verses[2].english -or $thirdPanel.Children[3].Text -ne '[Quran 1:3]') { throw 'Grouped translation or reference mismatch.' }
     $countBeforeBatch = $script:readCount
     Hide-Verse
     Show-Verse
@@ -348,7 +348,7 @@ if ($Check) {
     Set-StartingVerse 5
     Show-Verse
     $boundaryPanel = $window.FindName('AdditionalVerses').Children[1]
-    if ($boundaryPanel.Children[3].Text -ne 'Quran 2:1') { throw 'Batch crossing a surah boundary has the wrong reference.' }
+    if ($boundaryPanel.Children[3].Text -ne '[Quran 2:1]') { throw 'Batch crossing a surah boundary has the wrong reference.' }
     Set-StartingVerse 6234
     Show-Verse
     if ($script:displayedCount -ne 2) { throw 'Final Quran batch exceeded remaining verses.' }
@@ -404,7 +404,7 @@ if ($Check) {
     if ($script:memorizationWindow.Width -ne $window.Width) { throw 'Reading and memorization must share a responsive width.' }
     if ($script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.ImageBrush]) { throw 'Custom background was missing from memorization.' }
     Reset-DefaultBackground
-    if ($window.FindName('BackgroundCard').Background -isnot [Windows.Media.SolidColorBrush] -or $script:memorizationWindow.FindName('MemoBackground').Background -isnot [Windows.Media.SolidColorBrush]) { throw 'Default background was not restored in both windows.' }
+    if (-not [object]::ReferenceEquals($window.FindName('BackgroundCard').Background, $script:paperBackgroundBrush) -or -not [object]::ReferenceEquals($script:memorizationWindow.FindName('MemoBackground').Background, $script:paperBackgroundBrush)) { throw 'Default background was not restored in both windows.' }
     if (-not (Test-Path $customBackgroundPath) -or (Get-Content $preferencesPath -Raw | ConvertFrom-Json).use_custom_background -ne $false) { throw 'Default background choice did not persist or removed the custom image.' }
     Set-CustomBackground (Join-Path $PSScriptRoot 'background.png')
     if (-not [object]::ReferenceEquals($window.FindName('BackgroundCard').Background, $script:memorizationWindow.FindName('MemoBackground').Background)) { throw 'Changing the background did not update both existing windows.' }
@@ -413,12 +413,23 @@ if ($Check) {
         $linear = @($channels | ForEach-Object { $channel = $_ / 255.0; if ($channel -le 0.04045) { $channel / 12.92 } else { [Math]::Pow(($channel + 0.055) / 1.055, 2.4) } })
         return 0.2126 * $linear[0] + 0.7152 * $linear[1] + 0.0722 * $linear[2]
     }
+    $paperCanvas = $script:paperBackgroundBrush.Visual
+    $darkestPaper = ($paperCanvas.Background.GradientStops | Sort-Object { & $relativeLuminance @($_.Color.R, $_.Color.G, $_.Color.B) } | Select-Object -First 1).Color
+    $shadowCanvas = $paperCanvas.Children[0]
+    $shadowInk = $shadowCanvas.Children[0].Fill.Color
+    $shadowOpacity = $shadowCanvas.Opacity
+    $minimumPaperLuminance = & $relativeLuminance @(
+        ($darkestPaper.R * (1 - $shadowOpacity) + $shadowInk.R * $shadowOpacity),
+        ($darkestPaper.G * (1 - $shadowOpacity) + $shadowInk.G * $shadowOpacity),
+        ($darkestPaper.B * (1 - $shadowOpacity) + $shadowInk.B * $shadowOpacity)
+    )
     $veil = $script:reminderVeilBrush.Color
     $veilOpacity = $veil.A / 255.0
     $minimumBackgroundLuminance = & $relativeLuminance @(($veil.R * $veilOpacity), ($veil.G * $veilOpacity), ($veil.B * $veilOpacity))
     foreach ($textSample in @($verseText, $translationText, $progressText, $script:memorizationWindow.FindName('Status'))) {
         $ink = $textSample.Foreground.Color
         $inkLuminance = & $relativeLuminance @($ink.R, $ink.G, $ink.B)
+        if (($minimumPaperLuminance + 0.05) / ($inkLuminance + 0.05) -lt 4.5) { throw 'Reminder text contrast failed over the default paper shadows.' }
         if (($minimumBackgroundLuminance + 0.05) / ($inkLuminance + 0.05) -lt 4.5) { throw 'Reminder text contrast failed over a dark custom image.' }
     }
     Hide-Verse

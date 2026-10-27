@@ -1,4 +1,21 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">  <Style TargetType="Button">
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <VisualBrush x:Key="EditorialPaper" Stretch="Fill" RenderOptions.CachingHint="Cache">
+  <VisualBrush.RelativeTransform><ScaleTransform ScaleX="-1" CenterX="0.5"/></VisualBrush.RelativeTransform>
+  <VisualBrush.Visual>
+   <Canvas Width="1040" Height="760" ClipToBounds="True" FlowDirection="LeftToRight">
+    <Canvas.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0.6"><GradientStop Color="#F4EFE5" Offset="0"/><GradientStop Color="#E8DFD0" Offset="1"/></LinearGradientBrush></Canvas.Background>
+    <Canvas Opacity="0.12" IsHitTestVisible="False">
+     <Canvas.Effect><BlurEffect Radius="19"/></Canvas.Effect>
+     <Path Fill="#534A3C" Data="M -80,-60 C 80,-40 60,120 310,280 C 120,240 10,90 -80,-60 Z"/>
+     <Path Fill="#534A3C" Data="M 30,-90 C 180,-50 160,80 390,150 C 200,160 70,20 30,-90 Z"/>
+     <Path Fill="#534A3C" Data="M -90,20 C 20,80 -20,200 200,350 C 10,290 -50,140 -90,20 Z"/>
+     <Path Fill="#534A3C" Data="M -90,170 C 40,230 10,330 180,480 C -20,400 -70,290 -90,170 Z"/>
+     <Path Fill="#534A3C" Data="M 200,-90 C 330,-50 350,20 570,65 C 380,110 270,0 200,-90 Z"/>
+    </Canvas>
+   </Canvas>
+  </VisualBrush.Visual>
+ </VisualBrush>
+  <Style TargetType="Button">
    <Setter Property="Background" Value="#E4EFF2"/><Setter Property="Foreground" Value="#193E49"/>
    <Setter Property="Padding" Value="20,11"/><Setter Property="Cursor" Value="Hand"/>
    <Setter Property="BorderBrush" Value="#C7DBE1"/><Setter Property="BorderThickness" Value="1"/>
